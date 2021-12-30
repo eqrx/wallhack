@@ -30,6 +30,7 @@ func main() {
 	var err error
 	defer func() {
 		if err != nil {
+			log.Error(err, "program error")
 			os.Exit(1)
 		}
 	}()
@@ -38,8 +39,4 @@ func main() {
 	defer cancel()
 
 	err = internal.Run(ctx, log)
-
-	if err != nil {
-		log.Error(err, "program error")
-	}
 }

@@ -53,17 +53,17 @@ func Lookup(name string) (string, error) {
 func CreateTLSConfig() (*tls.Config, error) {
 	certStr, err := Lookup(Certificate)
 	if err != nil {
-		return nil, fmt.Errorf("%w: certificate for authenticating with the server", err)
+		return nil, fmt.Errorf("%w: certificate for authenticating with peer", err)
 	}
 
 	keyStr, err := Lookup(Key)
 	if err != nil {
-		return nil, fmt.Errorf("%w: key for authenticating with the server", err)
+		return nil, fmt.Errorf("%w: key for authenticating with peer", err)
 	}
 
 	caStr, err := Lookup(CA)
 	if err != nil {
-		return nil, fmt.Errorf("%w: certificate to validate the server", err)
+		return nil, fmt.Errorf("%w: certificate to validate peer", err)
 	}
 
 	cert, err := tls.X509KeyPair([]byte(certStr), []byte(keyStr))

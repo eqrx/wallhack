@@ -72,9 +72,8 @@ func Connect(ctx context.Context, log logr.Logger, conn net.Conn, tunIfaceName s
 		return nil
 	})
 
-	if errs := group.Wait(); len(errs) != 0 {
-		//nolint: goerr113 // Slice of errors, no wrapping possible or useful.
-		return fmt.Errorf("bridge conn and tun group failed: %v", errs)
+	if err := group.Wait(); err != nil {
+		return fmt.Errorf("bridge conn and tun group failed: %w", err)
 	}
 
 	return nil

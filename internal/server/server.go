@@ -68,9 +68,8 @@ func Run(ctx context.Context, log logr.Logger) error {
 		}
 	})
 
-	if errs := group.Wait(); len(errs) != 0 {
-		//nolint: goerr113 // Slice of errors, no wrapping possible or useful.
-		return fmt.Errorf("listening group failed: %v", errs)
+	if err := group.Wait(); err != nil {
+		return fmt.Errorf("listening group failed: %w", err)
 	}
 
 	return nil
@@ -103,7 +102,7 @@ func handleConn(ctx context.Context, log logr.Logger, conn *tls.Conn) {
 		return nil
 	})
 
-	if errs := group.Wait(); len(errs) != 0 {
-		panic(fmt.Sprintf("no errors expected, got %v", errs))
+	if err := group.Wait(); err != nil {
+		panic(fmt.Sprintf("no errors expected, got %v", err))
 	}
 }

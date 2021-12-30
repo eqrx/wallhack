@@ -94,9 +94,8 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 			return nil
 		})
 
-		if errs := group.Wait(); len(errs) != 0 {
-			//nolint: goerr113 // Slice of errors, no wrapping possible or useful.
-			return fmt.Errorf("conn group failed: %v", errs)
+		if err := group.Wait(); err != nil {
+			return fmt.Errorf("conn group failed: %w", err)
 		}
 	}
 }
