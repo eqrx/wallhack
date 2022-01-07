@@ -22,7 +22,7 @@ import (
 	"net"
 	"os"
 
-	"github.com/eqrx/rungroup"
+	"dev.eqrx.net/rungroup"
 	"github.com/go-logr/logr"
 )
 

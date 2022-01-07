@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/eqrx/rungroup"
-	"github.com/eqrx/wallhack/internal/io"
+	"dev.eqrx.net/rungroup"
+	"dev.eqrx.net/wallhack/internal/io"
 	"github.com/go-logr/logr"
 )
 

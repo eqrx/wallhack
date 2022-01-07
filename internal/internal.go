@@ -19,9 +19,9 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/eqrx/wallhack/internal/client"
-	"github.com/eqrx/wallhack/internal/env"
-	"github.com/eqrx/wallhack/internal/server"
+	"dev.eqrx.net/wallhack/internal/client"
+	"dev.eqrx.net/wallhack/internal/env"
+	"dev.eqrx.net/wallhack/internal/server"
 	"github.com/go-logr/logr"
 )
 

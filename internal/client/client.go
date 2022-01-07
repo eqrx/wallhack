@@ -21,9 +21,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/eqrx/rungroup"
-	"github.com/eqrx/wallhack/internal/env"
-	"github.com/eqrx/wallhack/internal/io"
+	"dev.eqrx.net/rungroup"
+	"dev.eqrx.net/wallhack/internal/env"
+	"dev.eqrx.net/wallhack/internal/io"
 	"github.com/go-logr/logr"
 )
 

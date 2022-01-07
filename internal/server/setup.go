@@ -20,8 +20,8 @@ import (
 	"fmt"
 	"net"
 
+	"dev.eqrx.net/wallhack/internal/env"
 	"github.com/coreos/go-systemd/v22/activation"
-	"github.com/eqrx/wallhack/internal/env"
 )
 
 // errSystemd indicates that interfacing with systemd did not work out quite well.

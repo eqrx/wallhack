@@ -19,7 +19,7 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/eqrx/wallhack/internal"
+	"dev.eqrx.net/wallhack/internal"
 	"github.com/go-logr/stdr"
 	"golang.org/x/sys/unix"
 )
