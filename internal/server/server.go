@@ -32,14 +32,14 @@ import (
 func Run(ctx context.Context, log logr.Logger) error {
 	listener, err := getListener(ctx)
 	if err != nil {
-		return fmt.Errorf("could not get tunnel listener: %w", err)
+		return fmt.Errorf("get tunnel listener: %w", err)
 	}
 
 	group := rungroup.New(ctx)
 	group.Go(func(ctx context.Context) error {
 		<-ctx.Done()
 		if err := listener.Close(); err != nil {
-			return fmt.Errorf("could not close listener: %w", err)
+			return fmt.Errorf("close listener: %w", err)
 		}
 
 		return nil
@@ -52,7 +52,7 @@ func Run(ctx context.Context, log logr.Logger) error {
 			case errors.Is(err, net.ErrClosed):
 				return nil
 			case err != nil:
-				return fmt.Errorf("failed to accept new connection: %w", err)
+				return fmt.Errorf("accept new connection: %w", err)
 			}
 
 			tlsFrom, ok := from.(*tls.Conn)
@@ -96,7 +96,7 @@ func handleConn(ctx context.Context, log logr.Logger, conn *tls.Conn) {
 
 		commonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
 		if err := io.Connect(ctx, log, conn, commonName); err != nil {
-			return fmt.Errorf("could not connection tun and bridge: %w", err)
+			return fmt.Errorf("connect tun and bridge: %w", err)
 		}
 
 		return nil

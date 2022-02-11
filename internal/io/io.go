@@ -44,7 +44,7 @@ type ipFrameWriter interface {
 func Connect(ctx context.Context, log logr.Logger, conn net.Conn, tunIfaceName string) error {
 	tun, err := newTun(tunIfaceName)
 	if err != nil {
-		return fmt.Errorf("could not setup tun: %w", err)
+		return fmt.Errorf("setup tun: %w", err)
 	}
 
 	bridge := &bridge{conn}
@@ -55,7 +55,7 @@ func Connect(ctx context.Context, log logr.Logger, conn net.Conn, tunIfaceName s
 		<-ctx.Done()
 
 		if err := tun.Close(); err != nil {
-			return fmt.Errorf("could not close tun: %w", err)
+			return fmt.Errorf("close tun: %w", err)
 		}
 
 		return nil
@@ -73,7 +73,7 @@ func Connect(ctx context.Context, log logr.Logger, conn net.Conn, tunIfaceName s
 	})
 
 	if err := group.Wait(); err != nil {
-		return fmt.Errorf("bridge conn and tun group failed: %w", err)
+		return fmt.Errorf("bridge conn and tun group: %w", err)
 	}
 
 	return nil

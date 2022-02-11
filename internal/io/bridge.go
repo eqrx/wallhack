@@ -37,7 +37,7 @@ func (t *bridge) writeIPFrame(f []byte) error {
 
 	n, err := t.conn.Write([]byte{byte(fLen >> 8), byte(fLen)})
 	if err != nil {
-		return fmt.Errorf("could not write frame header: %w", err)
+		return fmt.Errorf("write frame header: %w", err)
 	}
 
 	if n != 2 {
@@ -46,7 +46,7 @@ func (t *bridge) writeIPFrame(f []byte) error {
 
 	n, err = t.conn.Write(f)
 	if err != nil {
-		return fmt.Errorf("could not write frame payload: %w", err)
+		return fmt.Errorf("write frame payload: %w", err)
 	}
 
 	if n != fLen {
@@ -65,7 +65,7 @@ func (t *bridge) readIPFrame() ([]byte, error) {
 
 	n, err := t.conn.Read(fLenBytes)
 	if err != nil {
-		return nil, fmt.Errorf("could not read frame header: %w", err)
+		return nil, fmt.Errorf("read frame header: %w", err)
 	}
 
 	if n != 2 {
@@ -78,7 +78,7 @@ func (t *bridge) readIPFrame() ([]byte, error) {
 
 	n, err = t.conn.Read(f)
 	if err != nil {
-		return nil, fmt.Errorf("could not read frame: %w", err)
+		return nil, fmt.Errorf("read frame: %w", err)
 	}
 
 	if n != fLen {

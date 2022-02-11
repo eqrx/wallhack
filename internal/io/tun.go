@@ -104,12 +104,12 @@ func newTun(ifaceName string) (*tun, error) {
 
 	fd, err := unix.Open(tunPath, unix.O_RDWR|unix.O_NONBLOCK, 0)
 	if err != nil {
-		return nil, fmt.Errorf("could not open tun device: %w", err)
+		return nil, fmt.Errorf("open tun device: %w", err)
 	}
 
 	req, err := newTunRequest(ifaceName, tunFlag|noPiFlag)
 	if err != nil {
-		return nil, fmt.Errorf("could not create request: %w", err)
+		return nil, fmt.Errorf("create tun request: %w", err)
 	}
 
 	// Unholy-ish magic to get a C pointer for ioctl call.
@@ -119,7 +119,7 @@ func newTun(ifaceName string) (*tun, error) {
 
 	if errno != 0 {
 		if closeErr := unix.Close(fd); closeErr != nil {
-			return nil, fmt.Errorf("%w: code %v. could not close tun device after error: %v", errIoctl, errno, closeErr)
+			return nil, fmt.Errorf("%w: code %v. close tun device after error: %v", errIoctl, errno, closeErr)
 		}
 
 		return nil, fmt.Errorf("%w: code %v", errIoctl, errno)
@@ -131,7 +131,7 @@ func newTun(ifaceName string) (*tun, error) {
 // Close closes the underlying tun file.
 func (t *tun) Close() error {
 	if err := t.f.Close(); err != nil {
-		return fmt.Errorf("could not close tun fd: %w", err)
+		return fmt.Errorf("close tun fd: %w", err)
 	}
 
 	return nil
@@ -143,7 +143,7 @@ func (t *tun) readIPFrame() ([]byte, error) {
 
 	n, err := t.f.Read(packet)
 	if err != nil {
-		return nil, fmt.Errorf("could not read from tun: %w", err)
+		return nil, fmt.Errorf("read from tun: %w", err)
 	}
 
 	if n == len(packet)+1 {
@@ -161,7 +161,7 @@ func (t *tun) writeIPFrame(packet []byte) error {
 
 	n, err := t.f.Write(packet)
 	if err != nil {
-		return fmt.Errorf("could not write packet to tun: %w", err)
+		return fmt.Errorf("write packet to tun: %w", err)
 	}
 
 	if n != len(packet) {

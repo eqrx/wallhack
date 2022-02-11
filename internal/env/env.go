@@ -68,7 +68,7 @@ func CreateTLSConfig() (*tls.Config, error) {
 
 	cert, err := tls.X509KeyPair([]byte(certStr), []byte(keyStr))
 	if err != nil {
-		return nil, fmt.Errorf("could not parse tls certificate pair: %w", err)
+		return nil, fmt.Errorf("parse tls certificate pair: %w", err)
 	}
 
 	caCertPool := x509.NewCertPool()

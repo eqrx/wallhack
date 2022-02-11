@@ -43,7 +43,7 @@ func Run(ctx context.Context, log logr.Logger) error {
 
 	tlsConfig, err := env.CreateTLSConfig()
 	if err != nil {
-		return fmt.Errorf("could not create tls dialer: %w", err)
+		return fmt.Errorf("create tls dialer: %w", err)
 	}
 
 	dialer := &tls.Dialer{Config: tlsConfig}
@@ -88,14 +88,14 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 
 		group.Go(func(ctx context.Context) error {
 			if err := io.Connect(ctx, log, conn, tunIfaceName); err != nil {
-				return fmt.Errorf("could not connect tun and bridge: %w", err)
+				return fmt.Errorf("connect tun and bridge: %w", err)
 			}
 
 			return nil
 		})
 
 		if err := group.Wait(); err != nil {
-			return fmt.Errorf("conn group failed: %w", err)
+			return fmt.Errorf("conn group: %w", err)
 		}
 	}
 }
