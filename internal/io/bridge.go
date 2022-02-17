@@ -26,30 +26,30 @@ type bridge struct {
 	conn net.Conn
 }
 
-// writeIPFrame writes a complete IP frame as bytes and returns any io error encountered. This is done by first
+// writeIPFrame writes a complete IP frame given via data and returns any io error encountered. This is done by first
 // sending the size of the IP frame as a uint16 and then the actual frame.
 //nolint:gomnd // Byte shifting.
-func (t *bridge) writeIPFrame(f []byte) error {
-	fLen := len(f)
+func (t *bridge) writeIPFrame(data []byte) error {
+	fLen := len(data)
 	if fLen > maxBridgeFrameSize {
 		panic(fmt.Sprintf("did not expect frame length to be greater than %d but was %d", maxBridgeFrameSize, fLen))
 	}
 
-	n, err := t.conn.Write([]byte{byte(fLen >> 8), byte(fLen)})
+	bytesWritten, err := t.conn.Write([]byte{byte(fLen >> 8), byte(fLen)})
 	if err != nil {
 		return fmt.Errorf("write frame header: %w", err)
 	}
 
-	if n != 2 {
+	if bytesWritten != 2 {
 		panic("conn did not write header at once")
 	}
 
-	n, err = t.conn.Write(f)
+	bytesWritten, err = t.conn.Write(data)
 	if err != nil {
 		return fmt.Errorf("write frame payload: %w", err)
 	}
 
-	if n != fLen {
+	if bytesWritten != fLen {
 		panic("conn did not write payload at once")
 	}
 
@@ -63,27 +63,27 @@ func (t *bridge) writeIPFrame(f []byte) error {
 func (t *bridge) readIPFrame() ([]byte, error) {
 	fLenBytes := []byte{0, 0}
 
-	n, err := t.conn.Read(fLenBytes)
+	bytesRead, err := t.conn.Read(fLenBytes)
 	if err != nil {
 		return nil, fmt.Errorf("read frame header: %w", err)
 	}
 
-	if n != 2 {
+	if bytesRead != 2 {
 		panic("conn did not read header at once")
 	}
 
 	fLen := int(uint16(fLenBytes[0])<<8 | uint16(fLenBytes[1]))
 
-	f := make([]byte, fLen)
+	bytes := make([]byte, fLen)
 
-	n, err = t.conn.Read(f)
+	bytesRead, err = t.conn.Read(bytes)
 	if err != nil {
 		return nil, fmt.Errorf("read frame: %w", err)
 	}
 
-	if n != fLen {
+	if bytesRead != fLen {
 		panic("conn did not read frame at once")
 	}
 
-	return f, nil
+	return bytes, nil
 }

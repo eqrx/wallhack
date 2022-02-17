@@ -2,14 +2,19 @@ linters:
   disable-all: true
   enable:
     - asciicheck
+    - bidichk
     - bodyclose
+    - containedctx
+    - contextcheck
     - cyclop
     - deadcode
+    - decorder
     - depguard
     - dogsled
     - dupl
     - durationcheck
     - errcheck
+    - errchkjson
     - errorlint
     - exportloopref
     - forcetypeassert
@@ -33,15 +38,19 @@ linters:
     - gosec
     - gosimple
     - govet
+    - grouper
     - ifshort
     - importas
     - ineffassign
+    - ireturn
     - lll
+    - maintidx
     - makezero
     - misspell
     - nakedret
     - nestif
     - nilerr
+    - nilnil
     - nlreturn
     - noctx
     - nolintlint
@@ -54,6 +63,7 @@ linters:
     - staticcheck
     - structcheck
     - stylecheck
+    - tenv
     - testpackage
     - thelper
     - tparallel
@@ -62,6 +72,7 @@ linters:
     - unparam
     - unused
     - varcheck
+    - varnamelen
     - wastedassign
     - whitespace
     - wrapcheck
@@ -71,24 +82,26 @@ linters:
     - goconst
     - godox
     - promlinter
+    - tagliatelle
     - wsl
-    # - tagliatelle # Implementing against APIs, can't change tags.
     # - exhaustivestruct # Not for general usage.
     # - golint # Deprecated.
     # - interfacer # Deprecated.
     # - maligned # Deprecated.
     # - scopelint # Deprecated.
 issues:
+  max-same-issues: 0
+  max-issues-per-linter: 0
   include:
-  - EXC0001 # Do not ignore errors.
-  - EXC0002 # Actually require docs for exports.
-  - EXC0003 # Don't name packages "test".
-  - EXC0004 # Unsafe pointer is worth a "nolint".
-  - EXC0005 # No ineffective breaks.
-  - EXC0006 # Unsafe pointer is worth a "nolint".
-  - EXC0009 # File permissions are important.
-  - EXC0011 # Comment style checks.
-  - EXC0012 # Actually require docs for exports.
-  - EXC0013 # Actually require docs for exports.
-  - EXC0014 # Actually require docs for exports.
-  - EXC0015 # Actually require docs for exports.
+    - EXC0001 # Do not ignore errors.
+    - EXC0002 # Actually require docs for exports.
+    - EXC0003 # Don't name packages "test".
+    - EXC0004 # Unsafe pointer is worth a "nolint".
+    - EXC0005 # No ineffective breaks.
+    - EXC0006 # Unsafe pointer is worth a "nolint".
+    - EXC0009 # File permissions are important.
+    - EXC0011 # Comment style checks.
+    - EXC0012 # Actually require docs for exports.
+    - EXC0013 # Actually require docs for exports.
+    - EXC0014 # Actually require docs for exports.
+    - EXC0015 # Actually require docs for exports.

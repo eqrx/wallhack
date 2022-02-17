@@ -63,18 +63,17 @@ type request struct {
 // newTunRequest creates a new tun request marshalled as bytes.
 // It returns an error if the given tun name is too long.
 func newTunRequest(name string, flags requestFlag) ([]byte, error) {
-	r := request{}
+	request := request{[IfaceNameMaxLen]byte{}, uint16(flags)}
 	nameBytes := []byte(name)
 
-	if len(nameBytes) > len(r.name) {
+	if len(nameBytes) > len(request.name) {
 		return nil, fmt.Errorf("%w: %d", errNameTooLong, len(nameBytes))
 	}
 
-	copy(r.name[:], nameBytes)
-	r.flags = uint16(flags)
+	copy(request.name[:], nameBytes)
 
 	buf := &bytes.Buffer{}
-	if err := binary.Write(buf, binary.LittleEndian, &r); err != nil {
+	if err := binary.Write(buf, binary.LittleEndian, &request); err != nil {
 		panic(fmt.Sprintf("failed to serialize request: %v", err))
 	}
 
@@ -102,7 +101,7 @@ func newTun(ifaceName string) (*tun, error) {
 		return nil, fmt.Errorf("tun device %s needs to be created by the network manager: %w", ifaceName, err)
 	}
 
-	fd, err := unix.Open(tunPath, unix.O_RDWR|unix.O_NONBLOCK, 0)
+	tunFD, err := unix.Open(tunPath, unix.O_RDWR|unix.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, fmt.Errorf("open tun device: %w", err)
 	}
@@ -115,17 +114,17 @@ func newTun(ifaceName string) (*tun, error) {
 	// Unholy-ish magic to get a C pointer for ioctl call.
 	reqPtr := uintptr(unsafe.Pointer(&req[0])) //nolint:gosec // Needed for ioctl.
 
-	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(fd), ioctlNumber, reqPtr)
+	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(tunFD), ioctlNumber, reqPtr)
 
 	if errno != 0 {
-		if closeErr := unix.Close(fd); closeErr != nil {
+		if closeErr := unix.Close(tunFD); closeErr != nil {
 			return nil, fmt.Errorf("%w: code %v. close tun device after error: %v", errIoctl, errno, closeErr)
 		}
 
 		return nil, fmt.Errorf("%w: code %v", errIoctl, errno)
 	}
 
-	return &tun{os.NewFile(uintptr(fd), tunPath), iface.MTU}, nil
+	return &tun{os.NewFile(uintptr(tunFD), tunPath), iface.MTU}, nil
 }
 
 // Close closes the underlying tun file.
@@ -141,16 +140,16 @@ func (t *tun) Close() error {
 func (t *tun) readIPFrame() ([]byte, error) {
 	packet := make([]byte, t.mtu+1)
 
-	n, err := t.f.Read(packet)
+	bytesRead, err := t.f.Read(packet)
 	if err != nil {
 		return nil, fmt.Errorf("read from tun: %w", err)
 	}
 
-	if n == len(packet)+1 {
+	if bytesRead == len(packet)+1 {
 		panic("tun read packet that is larger than MTU")
 	}
 
-	return packet[:n], nil
+	return packet[:bytesRead], nil
 }
 
 // writeIPFrame writes an IP frame to the tun and returns any io error.
@@ -159,13 +158,13 @@ func (t *tun) writeIPFrame(packet []byte) error {
 		return fmt.Errorf("%w: MTU is %d, packet size is %d", ErrMTU, t.mtu, len(packet))
 	}
 
-	n, err := t.f.Write(packet)
+	bytesWritten, err := t.f.Write(packet)
 	if err != nil {
 		return fmt.Errorf("write packet to tun: %w", err)
 	}
 
-	if n != len(packet) {
-		panic(fmt.Sprintf("tun write with len %d with MTU %d returned %d written", len(packet), t.mtu, n))
+	if bytesWritten != len(packet) {
+		panic(fmt.Sprintf("tun write with len %d with MTU %d returned %d written", len(packet), t.mtu, bytesWritten))
 	}
 
 	return nil

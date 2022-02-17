@@ -28,12 +28,12 @@ var errEnvNotFound = errors.New("required env variable not set")
 const (
 	// Mode indicates if this wallhack instance shall be run in "server" or "client" mode.
 	Mode = "WALLHACK_MODE"
-	// Certificate wallhack shall use to authenticate against its peer. This is not a file name but the certificate itself.
+	// Certificate wallhack uses to authenticate against its peer. This is not a file name but the certificate itself.
 	Certificate = "WALLHACK_CERTIFICATE"
-	// Key wallhack shall use to encrypt traffic to its peer. This is not a file name but the key itself.
+	// Key wallhack uses to encrypt traffic to its peer. This is not a file name but the key itself.
 	Key = "WALLHACK_KEY"
-	// CA wallhack shall use to authenticate its peer peer. This is not a file name but the certificate itself.
-	CA = "WALLHACK_CA"
+	// CertificateAuthority wallhack uses to authenticate its peer. This is not a file name but the certificate itself.
+	CertificateAuthority = "WALLHACK_CA"
 	// ServerAddr is the address a client shall connect to.
 	ServerAddr = "WALLHACK_SERVER"
 )
@@ -61,7 +61,7 @@ func CreateTLSConfig() (*tls.Config, error) {
 		return nil, fmt.Errorf("%w: key for authenticating with peer", err)
 	}
 
-	caStr, err := Lookup(CA)
+	caStr, err := Lookup(CertificateAuthority)
 	if err != nil {
 		return nil, fmt.Errorf("%w: certificate to validate peer", err)
 	}
@@ -77,12 +77,11 @@ func CreateTLSConfig() (*tls.Config, error) {
 	}
 
 	return &tls.Config{
-		ClientCAs:                caCertPool,
-		RootCAs:                  caCertPool,
 		Certificates:             []tls.Certificate{cert},
-		CurvePreferences:         []tls.CurveID{tls.CurveP521},
-		MinVersion:               tls.VersionTLS13,
+		RootCAs:                  caCertPool,
 		ClientAuth:               tls.RequireAndVerifyClientCert,
+		ClientCAs:                caCertPool,
 		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS13,
 	}, nil
 }
