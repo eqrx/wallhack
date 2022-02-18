@@ -1,0 +1,10 @@
+[NetDev]
+Name=wallhack
+Kind=tun
+
+[Tun]
+MultiQueue=no
+PacketInfo=no
+VNetHeader=no
+User=wallhack
+Group=wallhack
