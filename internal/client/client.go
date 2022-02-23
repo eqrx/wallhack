@@ -19,11 +19,14 @@ import (
 	"context"
 	"crypto/tls"
 	"fmt"
+	"net"
+	"os"
 	"time"
 
 	"dev.eqrx.net/rungroup"
-	"dev.eqrx.net/wallhack/internal/env"
-	"dev.eqrx.net/wallhack/internal/io"
+	"dev.eqrx.net/wallhack/internal/bridge"
+	internaltls "dev.eqrx.net/wallhack/internal/tls"
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
 
@@ -32,23 +35,34 @@ const (
 	backOffDelay = 10 * time.Second
 	// tunIfaceName is the name of the tun interface to use for wallhack.
 	tunIfaceName = "wallhack"
+	// ServerEnvName is the name of the environment file containing the wallhack server address to connect to.
+	ServerEnvName = "WALLHACK_SERVER"
 )
 
 // Run this instance in client mode.
 func Run(ctx context.Context, log logr.Logger) error {
-	serverName, err := env.Lookup(env.ServerAddr)
-	if err != nil {
-		return fmt.Errorf("%w: net.Dial compatible address of the server", err)
+	serverAddr, _ := os.LookupEnv(ServerEnvName)
+
+	if _, _, err := net.SplitHostPort(serverAddr); err != nil {
+		return fmt.Errorf("%s does not contain server addr: %w", ServerEnvName, err)
 	}
 
-	tlsConfig, err := env.CreateTLSConfig()
+	tlsConfig, err := internaltls.Config()
 	if err != nil {
 		return fmt.Errorf("create tls dialer: %w", err)
 	}
 
 	dialer := &tls.Dialer{Config: tlsConfig}
 
-	return dial(ctx, log, dialer, serverName)
+	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+		return fmt.Errorf("systemd notify: %w", err)
+	}
+
+	err = dial(ctx, log, dialer, serverAddr)
+
+	_, _ = daemon.SdNotify(false, daemon.SdNotifyStopping)
+
+	return err
 }
 
 // dial attempts to dial with dialer to the server behind serverName until canceled.
@@ -56,6 +70,7 @@ func Run(ctx context.Context, log logr.Logger) error {
 // and vice versa. Returns any unexpected errors.
 func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName string) error {
 	for {
+		_, _ = daemon.SdNotify(false, "STATUS=dialing to "+serverName)
 		conn, err := dialer.DialContext(ctx, "tcp4", serverName)
 
 		switch {
@@ -63,6 +78,7 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 			return nil //nolint:nilerr // net package throws unexported net.errCanceled instead of wrapping context errs.
 		case err != nil:
 			log.Error(err, "could not open tunnel, backing off")
+			_, _ = daemon.SdNotify(false, "STATUS=backing off from "+serverName+": "+err.Error())
 
 			delay := time.NewTimer(backOffDelay)
 			select {
@@ -73,6 +89,8 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 
 			continue
 		}
+
+		_, _ = daemon.SdNotify(false, "STATUS=streaming to "+serverName)
 
 		group := rungroup.New(ctx)
 
@@ -87,7 +105,7 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 		})
 
 		group.Go(func(ctx context.Context) error {
-			if err := io.Connect(ctx, log, conn, tunIfaceName); err != nil {
+			if err := bridge.Connect(ctx, log, conn, tunIfaceName); err != nil {
 				return fmt.Errorf("connect tun and bridge: %w", err)
 			}
 

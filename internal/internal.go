@@ -16,36 +16,27 @@ package internal
 
 import (
 	"context"
-	"errors"
+	"flag"
 	"fmt"
 
 	"dev.eqrx.net/wallhack/internal/client"
-	"dev.eqrx.net/wallhack/internal/env"
 	"dev.eqrx.net/wallhack/internal/server"
 	"github.com/go-logr/logr"
 )
 
-// errUnknownMode indicates that wallhack was started with an unknown server mode.
-var errUnknownMode = errors.New("unknown operating mode")
-
 // Run wallhack.
 func Run(ctx context.Context, log logr.Logger) error {
-	mode, err := env.Lookup(env.Mode)
-	if err != nil {
-		return fmt.Errorf("%w: operating mode of this instance. May be client or server", err)
-	}
+	isServer := flag.Bool("server", false, "run in server mode")
+	flag.Parse()
 
-	switch mode {
-	case "server":
+	if *isServer {
 		if err := server.Run(ctx, log.WithName("server")); err != nil {
 			return fmt.Errorf("server run failed: %w", err)
 		}
-	case "client":
+	} else {
 		if err := client.Run(ctx, log.WithName("client")); err != nil {
 			return fmt.Errorf("client  failed: %w", err)
 		}
-	default:
-		return fmt.Errorf("%w set by %s: %s", errUnknownMode, env.Mode, mode)
 	}
 
 	return nil

@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"net"
 
-	"dev.eqrx.net/wallhack/internal/env"
+	internaltls "dev.eqrx.net/wallhack/internal/tls"
 	"github.com/coreos/go-systemd/v22/activation"
 )
 
@@ -44,7 +44,7 @@ func getListener(context.Context) (net.Listener, error) {
 
 	listener := listeners[0]
 
-	tlsConfig, err := env.CreateTLSConfig()
+	tlsConfig, err := internaltls.Config()
 	if err != nil {
 		return nil, fmt.Errorf("could not setup tls: %w", err)
 	}

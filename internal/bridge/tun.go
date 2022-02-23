@@ -11,7 +11,7 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package bridge
 
 import (
 	"bytes"
@@ -127,8 +127,8 @@ func newTun(ifaceName string) (*tun, error) {
 	return &tun{os.NewFile(uintptr(tunFD), tunPath), iface.MTU}, nil
 }
 
-// Close closes the underlying tun file.
-func (t *tun) Close() error {
+// close closes the underlying tun file.
+func (t *tun) close() error {
 	if err := t.f.Close(); err != nil {
 		return fmt.Errorf("close tun fd: %w", err)
 	}

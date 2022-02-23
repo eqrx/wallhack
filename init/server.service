@@ -1,14 +1,12 @@
 [Unit]
-Requires=wallhack.socket
-After=wallhack.socket network-online.target
+Requires=wallhack-server.socket
+After=wallhack-server.socket
 
 [Service]
-Type=simple
-ExecStart=/usr/bin/wallhack
+Type=notify
+ExecStart=/usr/bin/wallhack --server
 User=wallhack
-
-EnvironmentFile=/etc/wallhack.conf
-
+LoadCredentialEncrypted=wallhack:/etc/wallhack
 CapabilityBoundingSet=
 LockPersonality=true
 MemoryDenyWriteExecute=true
@@ -17,7 +15,6 @@ NoNewPrivileges=true
 PrivateTmp=true
 PrivateUsers=true
 ProcSubset=pid
-#ProtectClock=true
 ProtectControlGroups=true
 ProtectHome=true
 ProtectHostname=true
@@ -27,13 +24,14 @@ ProtectKernelTunables=true
 ProtectProc=invisible
 ProtectSystem=strict
 RemoveIPC=true
-RestrictAddressFamilies=AF_NETLINK
+RestrictAddressFamilies=AF_NETLINK AF_UNIX
 RestrictNamespaces=true
 RestrictRealtime=true
 RestrictSUIDSGID=true
 SecureBits=noroot-locked
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
 UMask=0077
 
 [Install]

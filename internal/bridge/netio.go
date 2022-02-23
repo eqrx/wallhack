@@ -11,31 +11,26 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
-package io
+package bridge
 
 import (
 	"fmt"
-	"net"
+	"io"
 )
 
-// maxBridgeFrameSize defines the maximum len in bytes of IP frames that are passed to the bridge.
-const maxBridgeFrameSize = int(^uint16(0))
-
-// bridge wraps a net.Conn and allows to stream ip frames over it.
-type bridge struct {
-	conn net.Conn
-}
+// maxFrameSize defines the maximum len in bytes of IP frames that are passed to the bridge.
+const maxFrameSize = int(^uint16(0))
 
 // writeIPFrame writes a complete IP frame given via data and returns any io error encountered. This is done by first
 // sending the size of the IP frame as a uint16 and then the actual frame.
 //nolint:gomnd // Byte shifting.
-func (t *bridge) writeIPFrame(data []byte) error {
-	fLen := len(data)
-	if fLen > maxBridgeFrameSize {
-		panic(fmt.Sprintf("did not expect frame length to be greater than %d but was %d", maxBridgeFrameSize, fLen))
+func writeIPFrame(dst io.Writer, src []byte) error {
+	fLen := len(src)
+	if fLen > maxFrameSize {
+		panic(fmt.Sprintf("did not expect frame length to be greater than %d but was %d", maxFrameSize, fLen))
 	}
 
-	bytesWritten, err := t.conn.Write([]byte{byte(fLen >> 8), byte(fLen)})
+	bytesWritten, err := dst.Write([]byte{byte(fLen >> 8), byte(fLen)})
 	if err != nil {
 		return fmt.Errorf("write frame header: %w", err)
 	}
@@ -44,7 +39,7 @@ func (t *bridge) writeIPFrame(data []byte) error {
 		panic("conn did not write header at once")
 	}
 
-	bytesWritten, err = t.conn.Write(data)
+	bytesWritten, err = dst.Write(src)
 	if err != nil {
 		return fmt.Errorf("write frame payload: %w", err)
 	}
@@ -59,16 +54,15 @@ func (t *bridge) writeIPFrame(data []byte) error {
 // readIPFrame returns a complete IP frame as bytes and any io error encountered. It does so by first reading a uint16
 // from the conn that indicates how large in bytes the following IP frame will be. It then reads that size and
 // returns it.
-//nolint:gomnd // Byte shifting.
-func (t *bridge) readIPFrame() ([]byte, error) {
+func readIPFrame(src io.Reader) ([]byte, error) {
 	fLenBytes := []byte{0, 0}
 
-	bytesRead, err := t.conn.Read(fLenBytes)
+	bytesRead, err := src.Read(fLenBytes)
 	if err != nil {
 		return nil, fmt.Errorf("read frame header: %w", err)
 	}
 
-	if bytesRead != 2 {
+	if bytesRead != len(fLenBytes) {
 		panic("conn did not read header at once")
 	}
 
@@ -76,7 +70,7 @@ func (t *bridge) readIPFrame() ([]byte, error) {
 
 	bytes := make([]byte, fLen)
 
-	bytesRead, err = t.conn.Read(bytes)
+	bytesRead, err = src.Read(bytes)
 	if err != nil {
 		return nil, fmt.Errorf("read frame: %w", err)
 	}

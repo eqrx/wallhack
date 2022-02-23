@@ -24,7 +24,8 @@ import (
 	"net"
 
 	"dev.eqrx.net/rungroup"
-	"dev.eqrx.net/wallhack/internal/io"
+	"dev.eqrx.net/wallhack/internal/bridge"
+	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
 
@@ -34,6 +35,14 @@ func Run(ctx context.Context, log logr.Logger) error {
 	if err != nil {
 		return fmt.Errorf("get tunnel listener: %w", err)
 	}
+
+	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
+		return fmt.Errorf("systemd notify: %w", err)
+	}
+
+	_, _ = daemon.SdNotify(false, "STATUS=listening on "+listener.Addr().String())
+
+	defer func() { _, _ = daemon.SdNotify(false, daemon.SdNotifyStopping) }()
 
 	group := rungroup.New(ctx)
 	group.Go(func(ctx context.Context) error {
@@ -95,7 +104,7 @@ func handleConn(ctx context.Context, log logr.Logger, conn *tls.Conn) {
 		}
 
 		commonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		if err := io.Connect(ctx, log, conn, commonName); err != nil {
+		if err := bridge.Connect(ctx, log, conn, commonName); err != nil {
 			return fmt.Errorf("connect tun and bridge: %w", err)
 		}
 
