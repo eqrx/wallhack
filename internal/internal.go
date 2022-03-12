@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Alexander Sowitzki
+// Copyright (C) 2022 Alexander Sowitzki
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -20,8 +20,10 @@ import (
 	"fmt"
 
 	"dev.eqrx.net/wallhack/internal/client"
+	"dev.eqrx.net/wallhack/internal/credentials"
 	"dev.eqrx.net/wallhack/internal/server"
 	"github.com/go-logr/logr"
+	"gopkg.in/yaml.v3"
 )
 
 // Run wallhack.
@@ -29,14 +31,31 @@ func Run(ctx context.Context, log logr.Logger) error {
 	isServer := flag.Bool("server", false, "run in server mode")
 	flag.Parse()
 
+	credentialBytes, err := credentials.LoadBytes()
+	if err != nil {
+		return fmt.Errorf("could not load credentials: %w", err)
+	}
+
 	if *isServer {
-		if err := server.Run(ctx, log.WithName("server")); err != nil {
+		var credentials credentials.Server
+		if err := yaml.Unmarshal(credentialBytes, &credentials); err != nil {
+			return fmt.Errorf("could not unmarshal credentials: %w", err)
+		}
+
+		if err := server.Run(ctx, log.WithName("server"), credentials); err != nil {
 			return fmt.Errorf("server run failed: %w", err)
 		}
-	} else {
-		if err := client.Run(ctx, log.WithName("client")); err != nil {
-			return fmt.Errorf("client  failed: %w", err)
-		}
+
+		return nil
+	}
+
+	var credentials credentials.Client
+	if err := yaml.Unmarshal(credentialBytes, &credentials); err != nil {
+		return fmt.Errorf("could not unmarshal credentials: %w", err)
+	}
+
+	if err := client.Run(ctx, log.WithName("client"), credentials); err != nil {
+		return fmt.Errorf("client  failed: %w", err)
 	}
 
 	return nil

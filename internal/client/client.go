@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Alexander Sowitzki
+// Copyright (C) 2022 Alexander Sowitzki
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -25,7 +25,7 @@ import (
 
 	"dev.eqrx.net/rungroup"
 	"dev.eqrx.net/wallhack/internal/bridge"
-	internaltls "dev.eqrx.net/wallhack/internal/tls"
+	"dev.eqrx.net/wallhack/internal/credentials"
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
@@ -40,16 +40,16 @@ const (
 )
 
 // Run this instance in client mode.
-func Run(ctx context.Context, log logr.Logger) error {
+func Run(ctx context.Context, log logr.Logger, credentials credentials.Client) error {
 	serverAddr, _ := os.LookupEnv(ServerEnvName)
 
 	if _, _, err := net.SplitHostPort(serverAddr); err != nil {
 		return fmt.Errorf("%s does not contain server addr: %w", ServerEnvName, err)
 	}
 
-	tlsConfig, err := internaltls.Config()
+	tlsConfig, err := credentials.TLSConf()
 	if err != nil {
-		return fmt.Errorf("create tls dialer: %w", err)
+		return fmt.Errorf("create tls config: %w", err)
 	}
 
 	dialer := &tls.Dialer{Config: tlsConfig}

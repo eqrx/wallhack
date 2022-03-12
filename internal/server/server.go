@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Alexander Sowitzki
+// Copyright (C) 2022 Alexander Sowitzki
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -22,60 +22,40 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/http"
+	"time"
 
 	"dev.eqrx.net/rungroup"
-	"dev.eqrx.net/wallhack/internal/bridge"
+	"dev.eqrx.net/wallhack/internal/credentials"
+	"github.com/coreos/go-systemd/v22/activation"
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
 
+// errSystemd indicates that interfacing with systemd did not work out quite well.
+var errSystemd = errors.New("systemd interfacing failed")
+
+const shutdownTimeout = 3 * time.Second
+
 // Run wallhack in server mode.
-func Run(ctx context.Context, log logr.Logger) error {
-	listener, err := getListener(ctx)
+func Run(ctx context.Context, log logr.Logger, credentials credentials.Server) error {
+	tlsConfig, err := credentials.TLSConf()
 	if err != nil {
-		return fmt.Errorf("get tunnel listener: %w", err)
+		return fmt.Errorf("could not setup tls: %w", err)
+	}
+
+	group := rungroup.New(ctx)
+	if err := startServers(log, group, tlsConfig); err != nil { //nolint:contextcheck
+		return err
 	}
 
 	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
 		return fmt.Errorf("systemd notify: %w", err)
 	}
 
-	_, _ = daemon.SdNotify(false, "STATUS=listening on "+listener.Addr().String())
+	_, _ = daemon.SdNotify(false, "STATUS=listening")
 
 	defer func() { _, _ = daemon.SdNotify(false, daemon.SdNotifyStopping) }()
-
-	group := rungroup.New(ctx)
-	group.Go(func(ctx context.Context) error {
-		<-ctx.Done()
-		if err := listener.Close(); err != nil {
-			return fmt.Errorf("close listener: %w", err)
-		}
-
-		return nil
-	})
-	group.Go(func(ctx context.Context) error {
-		for {
-			from, err := listener.Accept()
-
-			switch {
-			case errors.Is(err, net.ErrClosed):
-				return nil
-			case err != nil:
-				return fmt.Errorf("accept new connection: %w", err)
-			}
-
-			tlsFrom, ok := from.(*tls.Conn)
-			if !ok {
-				panic("connection received from tls listener is non TLS")
-			}
-
-			group.Go(func(ctx context.Context) error {
-				handleConn(ctx, log, tlsFrom)
-
-				return nil
-			}, rungroup.NoCancelOnSuccess)
-		}
-	})
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("listening group failed: %w", err)
@@ -84,34 +64,75 @@ func Run(ctx context.Context, log logr.Logger) error {
 	return nil
 }
 
-// handleConn that was accepted by the listener.
-func handleConn(ctx context.Context, log logr.Logger, conn *tls.Conn) {
-	group := rungroup.New(ctx)
-	group.Go(func(ctx context.Context) error {
-		<-ctx.Done()
-		if err := conn.Close(); err != nil {
-			log.Error(err, "tls handshake failed for tunnel")
-		}
-
-		return nil
-	})
-
-	group.Go(func(ctx context.Context) error {
-		if err := conn.HandshakeContext(ctx); err != nil {
-			log.Error(err, "tls handshake failed for tunnel")
-
-			return nil
-		}
-
-		commonName := conn.ConnectionState().PeerCertificates[0].Subject.CommonName
-		if err := bridge.Connect(ctx, log, conn, commonName); err != nil {
-			return fmt.Errorf("connect tun and bridge: %w", err)
-		}
-
-		return nil
-	})
-
-	if err := group.Wait(); err != nil {
-		panic(fmt.Sprintf("no errors expected, got %v", err))
+func startServers(log logr.Logger, group *rungroup.Group, tlsConfig *tls.Config) error {
+	setupTLS, setupServer, err := loadHTTPPlugin()
+	if err != nil {
+		return err
 	}
+
+	setupTLS(tlsConfig)
+
+	listeners, err := activation.Listeners()
+	if err != nil {
+		return fmt.Errorf("could not get listeners from systemd: %w", err)
+	}
+
+	tlsListeners := []net.Listener{}
+	servers := []*http.Server{}
+
+	for _, l := range listeners {
+		if l == nil {
+			return fmt.Errorf("%w: file passed is not listener", errSystemd)
+		}
+
+		tlsListeners = append(tlsListeners, tls.NewListener(l, tlsConfig))
+
+		server := &http.Server{
+			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
+				credentials.ALPNWallhack: func(server *http.Server, conn *tls.Conn, _ http.Handler) {
+					handleWallhackConn(server.BaseContext(nil), log, conn)
+				},
+			},
+			Handler: http.NewServeMux(),
+		}
+
+		if err := setupServer(server); err != nil {
+			return fmt.Errorf("setup http server by plugin: %w", err)
+		}
+
+		servers = append(servers, server)
+	}
+
+	for i := range servers {
+		startServer(servers[i], tlsListeners[i], group)
+	}
+
+	return nil
+}
+
+func startServer(server *http.Server, listener net.Listener, group *rungroup.Group) {
+	group.Go(func(ctx context.Context) error {
+		server.BaseContext = func(l net.Listener) context.Context { return ctx }
+
+		group.Go(func(ctx context.Context) error {
+			<-ctx.Done()
+
+			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
+
+			err := server.Shutdown(shutdownCtx) //nolint:contextcheck
+			shutdownCancel()
+
+			if err == nil || errors.Is(err, http.ErrServerClosed) {
+				return nil
+			}
+
+			return fmt.Errorf("close listener: %w", err)
+		})
+		err := server.Serve(listener)
+		if err != nil && !errors.Is(err, http.ErrServerClosed) {
+			return fmt.Errorf("serve http: %w", err)
+		}
+
+		return nil
+	})
 }
