@@ -19,9 +19,9 @@ import (
 	"flag"
 	"fmt"
 
-	"dev.eqrx.net/wallhack/internal/client"
-	"dev.eqrx.net/wallhack/internal/credentials"
-	"dev.eqrx.net/wallhack/internal/server"
+	"eqrx.net/wallhack/internal/client"
+	"eqrx.net/wallhack/internal/credentials"
+	"eqrx.net/wallhack/internal/server"
 	"github.com/go-logr/logr"
 	"gopkg.in/yaml.v3"
 )

@@ -1,4 +1,4 @@
-[![Go Reference](https://pkg.go.dev/badge/dev.eqrx.net/wallhack.svg)](https://pkg.go.dev/dev.eqrx.net/wallhack)
+[![Go Reference](https://pkg.go.dev/badge/eqrx.net/wallhack.svg)](https://pkg.go.dev/eqrx.net/wallhack)
 # wallhack
 
 Connect two linux tun interfaces over a TLS connection together. Use systemd as hard as possible for that. I use this

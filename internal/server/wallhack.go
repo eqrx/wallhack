@@ -18,8 +18,8 @@ import (
 	"crypto/tls"
 	"fmt"
 
-	"dev.eqrx.net/rungroup"
-	"dev.eqrx.net/wallhack/internal/bridge"
+	"eqrx.net/rungroup"
+	"eqrx.net/wallhack/internal/bridge"
 	"github.com/go-logr/logr"
 )
 

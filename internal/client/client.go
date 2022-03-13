@@ -23,9 +23,9 @@ import (
 	"os"
 	"time"
 
-	"dev.eqrx.net/rungroup"
-	"dev.eqrx.net/wallhack/internal/bridge"
-	"dev.eqrx.net/wallhack/internal/credentials"
+	"eqrx.net/rungroup"
+	"eqrx.net/wallhack/internal/bridge"
+	"eqrx.net/wallhack/internal/credentials"
 	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
