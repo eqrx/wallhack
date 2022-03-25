@@ -24,9 +24,8 @@ import (
 	"time"
 
 	"eqrx.net/rungroup"
+	"eqrx.net/service"
 	"eqrx.net/wallhack/internal/bridge"
-	"eqrx.net/wallhack/internal/credentials"
-	"github.com/coreos/go-systemd/v22/daemon"
 	"github.com/go-logr/logr"
 )
 
@@ -39,28 +38,49 @@ const (
 	ServerEnvName = "WALLHACK_SERVER"
 )
 
+// Client represents the credentials for running in client mode.
+type Client struct {
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
+}
+
+// TLSConf generates the TLS configuration for read credentials. It can
+// be used to connect to a wallhack server.
+func (c Client) tlsConf() (*tls.Config, error) {
+	cert, err := tls.X509KeyPair([]byte(c.Cert), []byte(c.Key))
+	if err != nil {
+		return nil, fmt.Errorf("parse cert: %w", err)
+	}
+
+	config := &tls.Config{
+		Certificates:             []tls.Certificate{cert},
+		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS13,
+		NextProtos:               []string{"wallhack"},
+	}
+
+	return config, nil
+}
+
 // Run this instance in client mode.
-func Run(ctx context.Context, log logr.Logger, credentials credentials.Client) error {
+func (c Client) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
 	serverAddr, _ := os.LookupEnv(ServerEnvName)
 
 	if _, _, err := net.SplitHostPort(serverAddr); err != nil {
 		return fmt.Errorf("%s does not contain server addr: %w", ServerEnvName, err)
 	}
 
-	tlsConfig, err := credentials.TLSConf()
+	tlsConfig, err := c.tlsConf()
 	if err != nil {
 		return fmt.Errorf("create tls config: %w", err)
 	}
 
 	dialer := &tls.Dialer{Config: tlsConfig}
 
-	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
-		return fmt.Errorf("systemd notify: %w", err)
-	}
+	_ = service.MarkReady()
+	defer func() { _ = service.MarkStopping() }()
 
-	err = dial(ctx, log, dialer, serverAddr)
-
-	_, _ = daemon.SdNotify(false, daemon.SdNotifyStopping)
+	err = dial(ctx, log, service, dialer, serverAddr)
 
 	return err
 }
@@ -68,9 +88,9 @@ func Run(ctx context.Context, log logr.Logger, credentials credentials.Client) e
 // dial attempts to dial with dialer to the server behind serverName until canceled.
 // On success a local tun is opened and all packets arriving on it will be streamed over conn
 // and vice versa. Returns any unexpected errors.
-func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName string) error {
+func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer *tls.Dialer, serverName string) error {
 	for {
-		_, _ = daemon.SdNotify(false, "STATUS=dialing to "+serverName)
+		_ = service.MarkStatus("dialing to " + serverName)
 		conn, err := dialer.DialContext(ctx, "tcp4", serverName)
 
 		switch {
@@ -78,7 +98,7 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 			return nil //nolint:nilerr // net package throws unexported net.errCanceled instead of wrapping context errs.
 		case err != nil:
 			log.Error(err, "could not open tunnel, backing off")
-			_, _ = daemon.SdNotify(false, "STATUS=backing off from "+serverName+": "+err.Error())
+			_ = service.MarkStatus("backing off from " + serverName + ": " + err.Error())
 
 			delay := time.NewTimer(backOffDelay)
 			select {
@@ -90,7 +110,7 @@ func dial(ctx context.Context, log logr.Logger, dialer *tls.Dialer, serverName s
 			continue
 		}
 
-		_, _ = daemon.SdNotify(false, "STATUS=streaming to "+serverName)
+		_ = service.MarkStatus("streaming to " + serverName)
 
 		group := rungroup.New(ctx)
 

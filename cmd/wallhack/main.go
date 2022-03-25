@@ -15,28 +15,35 @@ package main
 
 import (
 	"context"
-	stdlog "log"
+	"fmt"
 	"os"
 	"os/signal"
 
+	"eqrx.net/service"
 	"eqrx.net/wallhack/internal"
-	"github.com/go-logr/stdr"
 	"golang.org/x/sys/unix"
 )
 
 func main() {
-	log := stdr.New(stdlog.New(os.Stderr, "", 0))
+	service, err := service.New()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "systemd: %v", err)
+		os.Exit(1)
+	}
 
-	var err error
-	defer func() {
-		if err != nil {
-			log.Error(err, "program error")
-			os.Exit(1)
-		}
-	}()
+	log := service.Journal()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
-	defer cancel()
 
-	err = internal.Run(ctx, log)
+	err = internal.Run(ctx, log, service)
+
+	cancel()
+
+	if err != nil {
+		log.Error(err, "main")
+
+		os.Exit(1)
+	}
+
+	os.Exit(0)
 }

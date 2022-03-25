@@ -19,6 +19,7 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
 	"net"
@@ -26,9 +27,7 @@ import (
 	"time"
 
 	"eqrx.net/rungroup"
-	"eqrx.net/wallhack/internal/credentials"
-	"github.com/coreos/go-systemd/v22/activation"
-	"github.com/coreos/go-systemd/v22/daemon"
+	"eqrx.net/service"
 	"github.com/go-logr/logr"
 )
 
@@ -37,25 +36,54 @@ var errSystemd = errors.New("systemd interfacing failed")
 
 const shutdownTimeout = 3 * time.Second
 
+var errNoCA = errors.New("no CA given")
+
+// Server represents the credentials for running in server mode.
+type Server struct {
+	Cert string `yaml:"cert"`
+	Key  string `yaml:"key"`
+	CA   string `yaml:"ca"`
+}
+
+func (s Server) tlsConf() (*tls.Config, error) {
+	cert, err := tls.X509KeyPair([]byte(s.Cert), []byte(s.Key))
+	if err != nil {
+		return nil, fmt.Errorf("parse cert: %w", err)
+	}
+
+	clientCAs := x509.NewCertPool()
+	if !clientCAs.AppendCertsFromPEM([]byte(s.CA)) {
+		return nil, errNoCA
+	}
+
+	config := &tls.Config{
+		Certificates:             []tls.Certificate{cert},
+		ClientCAs:                clientCAs,
+		PreferServerCipherSuites: true,
+		MinVersion:               tls.VersionTLS13,
+		NextProtos:               []string{"wallhack"},
+		ClientAuth:               tls.VerifyClientCertIfGiven,
+	}
+
+	return config, nil
+}
+
 // Run wallhack in server mode.
-func Run(ctx context.Context, log logr.Logger, credentials credentials.Server) error {
-	tlsConfig, err := credentials.TLSConf()
+func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+	tlsConfig, err := s.tlsConf()
 	if err != nil {
 		return fmt.Errorf("could not setup tls: %w", err)
 	}
 
 	group := rungroup.New(ctx)
-	if err := startServers(log, group, tlsConfig); err != nil { //nolint:contextcheck
+	if err := startServers(log, service, group, tlsConfig); err != nil { //nolint:contextcheck
 		return err
 	}
 
-	if _, err := daemon.SdNotify(false, daemon.SdNotifyReady); err != nil {
-		return fmt.Errorf("systemd notify: %w", err)
-	}
+	_ = service.MarkReady()
+	_ = service.MarkStatus("listening")
 
-	_, _ = daemon.SdNotify(false, "STATUS=listening")
-
-	defer func() { _, _ = daemon.SdNotify(false, daemon.SdNotifyStopping) }()
+	defer func() { _ = service.MarkStopping() }()
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("listening group failed: %w", err)
@@ -64,7 +92,7 @@ func Run(ctx context.Context, log logr.Logger, credentials credentials.Server) e
 	return nil
 }
 
-func startServers(log logr.Logger, group *rungroup.Group, tlsConfig *tls.Config) error {
+func startServers(log logr.Logger, service *service.Service, group *rungroup.Group, tlsConfig *tls.Config) error {
 	setupTLS, setupServer, err := loadHTTPPlugin()
 	if err != nil {
 		return err
@@ -72,9 +100,9 @@ func startServers(log logr.Logger, group *rungroup.Group, tlsConfig *tls.Config)
 
 	setupTLS(tlsConfig)
 
-	listeners, err := activation.Listeners()
+	listeners, err := service.Listeners()
 	if err != nil {
-		return fmt.Errorf("could not get listeners from systemd: %w", err)
+		return fmt.Errorf("no listeners: %w", err)
 	}
 
 	tlsListeners := []net.Listener{}
@@ -89,7 +117,7 @@ func startServers(log logr.Logger, group *rungroup.Group, tlsConfig *tls.Config)
 
 		server := &http.Server{
 			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
-				credentials.ALPNWallhack: func(server *http.Server, conn *tls.Conn, _ http.Handler) {
+				"wallhack": func(server *http.Server, conn *tls.Conn, _ http.Handler) {
 					handleWallhackConn(server.BaseContext(nil), log, conn)
 				},
 			},
