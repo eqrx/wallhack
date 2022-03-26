@@ -95,7 +95,7 @@ func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer
 
 		switch {
 		case ctx.Err() != nil:
-			return nil //nolint:nilerr // net package throws unexported net.errCanceled instead of wrapping context errs.
+			return nil
 		case err != nil:
 			log.Error(err, "could not open tunnel, backing off")
 			_ = service.MarkStatus("backing off from " + serverName + ": " + err.Error())

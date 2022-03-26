@@ -11,31 +11,26 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
-package server
+package wallhack
 
 import (
-	"fmt"
-	"os"
-	"plugin"
-
-	"eqrx.net/wallhack"
+	"context"
+	"crypto/tls"
+	"net"
 )
 
-func loadPlugin() (wallhack.Plugin, error) { //nolint:ireturn
-	path, pluginSet := os.LookupEnv(wallhack.PluginPathEnvName)
-	if !pluginSet {
-		return nil, nil
-	}
+const (
+	// PluginPathEnvName is the environment name that contains the path to a go plugin that is loaded by wallhack
+	// for serving extra stuff.
+	PluginPathEnvName = "WALLHACK_PLUGIN_PATH"
 
-	plugin, err := plugin.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open http plugin: %w", err)
-	}
+	// PluginNewSymbolName is the name of the symbol within the plugin that is responsible for
+	// returning the Plugin interface. Needs to be NewPlugin.
+	PluginNewSymbolName = "New"
+)
 
-	newPluginSymbol, err := plugin.Lookup(wallhack.PluginNewSymbolName)
-	if err != nil {
-		return nil, fmt.Errorf("lookup http plugin server setup symbol: %w", err)
-	}
-
-	return newPluginSymbol.(func() interface{})().(wallhack.Plugin), nil //nolint:forcetypeassert
+// Plugin defines what methods a wallhack plugin needs to implement.
+type Plugin interface {
+	TLSConfig() *tls.Config
+	Listen(context.Context, net.Listener) error
 }

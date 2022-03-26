@@ -16,53 +16,93 @@ package server
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"fmt"
+	"net"
 
 	"eqrx.net/rungroup"
 	"eqrx.net/wallhack/internal/bridge"
 	"github.com/go-logr/logr"
 )
 
-// handleWallhackConn that was accepted by the listener.
-func handleWallhackConn(ctx context.Context, log logr.Logger, conn *tls.Conn) {
-	tlsState := conn.ConnectionState()
-	if len(tlsState.PeerCertificates) != 1 {
-		log.Info("client did not send exactly one cert")
+func serveListener(log logr.Logger, listener net.Listener) func(context.Context) error {
+	return func(ctx context.Context) error {
+		group := rungroup.New(ctx)
 
-		return
-	}
-
-	commonName := tlsState.PeerCertificates[0].Subject.CommonName
-
-	group := rungroup.New(ctx)
-	group.Go(func(ctx context.Context) error {
-		<-ctx.Done()
-		if err := conn.Close(); err != nil {
-			log.Error(err, "tls handshake failed for tunnel")
-		}
-
-		return nil
-	})
-
-	group.Go(func(ctx context.Context) error {
-		if err := conn.HandshakeContext(ctx); err != nil {
-			log.Error(err, "tls handshake failed for tunnel")
+		group.Go(func(ctx context.Context) error {
+			<-ctx.Done()
+			if err := listener.Close(); err != nil {
+				return fmt.Errorf("close listener: %w", err)
+			}
 
 			return nil
-		}
+		})
 
-		log.Info("start bridging", "cn", commonName)
-		err := bridge.Connect(ctx, log, conn, commonName)
-		log.Info("stop bridging", "cn", commonName)
+		group.Go(func(ctx context.Context) error {
+			for {
+				conn, err := listener.Accept()
+				switch {
+				case err == nil:
+					group.Go(serveConn(log, conn.(*tls.Conn))) //nolint:forcetypeassert
+				case errors.Is(err, net.ErrClosed):
+					return nil
+				default:
+					return fmt.Errorf("accept: %w", err)
+				}
+			}
+		})
 
-		if err != nil {
-			return fmt.Errorf("connect tun and bridge: %w", err)
+		if err := group.Wait(); err != nil {
+			return err
 		}
 
 		return nil
-	})
+	}
+}
 
-	if err := group.Wait(); err != nil {
-		panic(fmt.Sprintf("no errors expected, got %v", err))
+func serveConn(log logr.Logger, conn *tls.Conn) func(context.Context) error {
+	return func(ctx context.Context) error {
+		group := rungroup.New(ctx)
+		group.Go(func(ctx context.Context) error {
+			<-ctx.Done()
+			if err := conn.Close(); err != nil {
+				log.Error(err, "tls handshake failed for tunnel")
+			}
+
+			return nil
+		})
+
+		group.Go(func(ctx context.Context) error {
+			if err := conn.HandshakeContext(ctx); err != nil {
+				log.Error(err, "tls handshake failed for tunnel")
+
+				return nil
+			}
+
+			tlsState := conn.ConnectionState()
+			if len(tlsState.PeerCertificates) != 1 {
+				log.Info("client did not send exactly one cert")
+
+				return nil
+			}
+
+			commonName := tlsState.PeerCertificates[0].Subject.CommonName
+
+			log.Info("start bridging", "cn", commonName)
+			err := bridge.Connect(ctx, log, conn, commonName)
+			log.Info("stop bridging", "cn", commonName)
+
+			if err != nil {
+				return fmt.Errorf("connect tun and bridge: %w", err)
+			}
+
+			return nil
+		})
+
+		if err := group.Wait(); err != nil {
+			panic(fmt.Sprintf("no errors expected, got %v", err))
+		}
+
+		return nil
 	}
 }

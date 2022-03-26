@@ -11,31 +11,31 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
-package server
+package listener
 
-import (
-	"fmt"
-	"os"
-	"plugin"
+import "net"
 
-	"eqrx.net/wallhack"
-)
-
-func loadPlugin() (wallhack.Plugin, error) { //nolint:ireturn
-	path, pluginSet := os.LookupEnv(wallhack.PluginPathEnvName)
-	if !pluginSet {
-		return nil, nil
-	}
-
-	plugin, err := plugin.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("open http plugin: %w", err)
-	}
-
-	newPluginSymbol, err := plugin.Lookup(wallhack.PluginNewSymbolName)
-	if err != nil {
-		return nil, fmt.Errorf("lookup http plugin server setup symbol: %w", err)
-	}
-
-	return newPluginSymbol.(func() interface{})().(wallhack.Plugin), nil //nolint:forcetypeassert
+type frontendAddr struct {
+	str string
 }
+
+func (a frontendAddr) String() string  { return a.str }
+func (a frontendAddr) Network() string { return "tcp" }
+
+type frontend struct {
+	conns chan net.Conn
+	addr  frontendAddr
+}
+
+func (f frontend) Accept() (net.Conn, error) {
+	conn, ok := <-f.conns
+	if !ok {
+		return nil, net.ErrClosed
+	}
+
+	return conn, nil
+}
+
+func (f frontend) Close() error { return nil }
+
+func (f frontend) Addr() net.Addr { return f.addr }

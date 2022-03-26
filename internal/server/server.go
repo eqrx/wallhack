@@ -22,19 +22,12 @@ import (
 	"crypto/x509"
 	"errors"
 	"fmt"
-	"net"
-	"net/http"
-	"time"
 
 	"eqrx.net/rungroup"
 	"eqrx.net/service"
+	"eqrx.net/wallhack/internal/server/listener"
 	"github.com/go-logr/logr"
 )
-
-// errSystemd indicates that interfacing with systemd did not work out quite well.
-var errSystemd = errors.New("systemd interfacing failed")
-
-const shutdownTimeout = 3 * time.Second
 
 var errNoCA = errors.New("no CA given")
 
@@ -62,7 +55,7 @@ func (s Server) tlsConf() (*tls.Config, error) {
 		PreferServerCipherSuites: true,
 		MinVersion:               tls.VersionTLS13,
 		NextProtos:               []string{"wallhack"},
-		ClientAuth:               tls.VerifyClientCertIfGiven,
+		ClientAuth:               tls.RequireAndVerifyClientCert,
 	}
 
 	return config, nil
@@ -75,9 +68,38 @@ func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Servi
 		return fmt.Errorf("could not setup tls: %w", err)
 	}
 
-	group := rungroup.New(ctx)
-	if err := startServers(log, service, group, tlsConfig); err != nil { //nolint:contextcheck
+	listeners, err := service.Listeners()
+	if err != nil {
+		return fmt.Errorf("no listeners: %w", err)
+	}
+
+	plugin, err := loadPlugin()
+	if err != nil {
 		return err
+	}
+
+	var pluginTLSConfig *tls.Config
+	if plugin != nil {
+		pluginTLSConfig = plugin.TLSConfig()
+		pluginTLSConfig.Certificates = []tls.Certificate{tlsConfig.Certificates[0]}
+	}
+
+	group := rungroup.New(ctx)
+
+	comboListener := listener.New(listeners, tlsConfig, pluginTLSConfig)
+
+	group.Go(comboListener.Listen(log))
+
+	group.Go(serveListener(log, comboListener.WallhackListener()))
+
+	if plugin != nil {
+		group.Go(func(ctx context.Context) error {
+			if err := plugin.Listen(ctx, comboListener.PluginListener()); err != nil {
+				return fmt.Errorf("plugin serve: %w", err)
+			}
+
+			return nil
+		})
 	}
 
 	_ = service.MarkReady()
@@ -90,77 +112,4 @@ func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Servi
 	}
 
 	return nil
-}
-
-func startServers(log logr.Logger, service *service.Service, group *rungroup.Group, tlsConfig *tls.Config) error {
-	setupTLS, setupServer, err := loadHTTPPlugin()
-	if err != nil {
-		return err
-	}
-
-	setupTLS(tlsConfig)
-
-	listeners, err := service.Listeners()
-	if err != nil {
-		return fmt.Errorf("no listeners: %w", err)
-	}
-
-	tlsListeners := []net.Listener{}
-	servers := []*http.Server{}
-
-	for _, l := range listeners {
-		if l == nil {
-			return fmt.Errorf("%w: file passed is not listener", errSystemd)
-		}
-
-		tlsListeners = append(tlsListeners, tls.NewListener(l, tlsConfig))
-
-		server := &http.Server{
-			TLSNextProto: map[string]func(*http.Server, *tls.Conn, http.Handler){
-				"wallhack": func(server *http.Server, conn *tls.Conn, _ http.Handler) {
-					handleWallhackConn(server.BaseContext(nil), log, conn)
-				},
-			},
-			Handler: http.NewServeMux(),
-		}
-
-		if err := setupServer(server); err != nil {
-			return fmt.Errorf("setup http server by plugin: %w", err)
-		}
-
-		servers = append(servers, server)
-	}
-
-	for i := range servers {
-		startServer(servers[i], tlsListeners[i], group)
-	}
-
-	return nil
-}
-
-func startServer(server *http.Server, listener net.Listener, group *rungroup.Group) {
-	group.Go(func(ctx context.Context) error {
-		server.BaseContext = func(l net.Listener) context.Context { return ctx }
-
-		group.Go(func(ctx context.Context) error {
-			<-ctx.Done()
-
-			shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), shutdownTimeout)
-
-			err := server.Shutdown(shutdownCtx) //nolint:contextcheck
-			shutdownCancel()
-
-			if err == nil || errors.Is(err, http.ErrServerClosed) {
-				return nil
-			}
-
-			return fmt.Errorf("close listener: %w", err)
-		})
-		err := server.Serve(listener)
-		if err != nil && !errors.Is(err, http.ErrServerClosed) {
-			return fmt.Errorf("serve http: %w", err)
-		}
-
-		return nil
-	})
 }
