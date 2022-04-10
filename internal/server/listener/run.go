@@ -59,6 +59,8 @@ func (l *Listener) acceptBackend(backend net.Listener, log logr.Logger) func(con
 			tlsConn := conn.(*tls.Conn) //nolint:forcetypeassert
 			if err := tlsConn.HandshakeContext(ctx); err != nil {
 				log.Error(err, "tls handshake")
+
+				continue
 			}
 
 			sink := l.pickSink(tlsConn.ConnectionState())

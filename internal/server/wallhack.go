@@ -66,7 +66,7 @@ func serveConn(log logr.Logger, conn *tls.Conn) func(context.Context) error {
 		group.Go(func(ctx context.Context) error {
 			<-ctx.Done()
 			if err := conn.Close(); err != nil {
-				log.Error(err, "tls handshake failed for tunnel")
+				return fmt.Errorf("closing conn: %w", err)
 			}
 
 			return nil
