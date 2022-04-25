@@ -1,7 +1,9 @@
+eqrx.net/journalr v0.0.1 h1:xT7T1lhwOk5hPa3OEviFx/AlitRydQSW08vB6qOxIkY=
+eqrx.net/journalr v0.0.1/go.mod h1:6cLBtbD1FOUC9yci07L38/mUB3rSdsXpWEF8vra9YS4=
 eqrx.net/rungroup v0.0.8 h1:+1uT2N1WMq9A4+Ju1Cy8TP0ELQm3Ilxztt7szQbbIhc=
 eqrx.net/rungroup v0.0.8/go.mod h1:OkhrVLfjVZOtC3Q1gaFprfKVIogC4M4jLnrI31EyKHc=
-eqrx.net/service v0.0.1 h1:hgZ2HW2H9rFw3dSYon6+kScToeG4NgJtzCQtwxS5Fn8=
-eqrx.net/service v0.0.1/go.mod h1:vk4TUH3sDBql6kCSu0YGI4mSyK+h5EONrDGcWhmixrE=
+eqrx.net/service v0.0.2 h1:Mle9zC2kKjI4ZBgP63hw2izxYvmfQ/qXK6GlvSXpv8s=
+eqrx.net/service v0.0.2/go.mod h1:bzxnPrLRYB5vD5oZz1OTBAz7hYPkfEBa8EYeoDWUCr4=
 github.com/go-logr/logr v1.2.3 h1:2DntVwHkVopvECVRSlL5PSo9eG+cAkDCuckLubN+rq0=
 github.com/go-logr/logr v1.2.3/go.mod h1:jdQByPbusPIv2/zmleS9BjJVeZ6kBagPoEUsqbVz/1A=
 golang.org/x/sys v0.0.0-20220319134239-a9b59b0215f8 h1:OH54vjqzRWmbJ62fjuhxy7AxFFgoHN0/DPc/UrL8cAs=
