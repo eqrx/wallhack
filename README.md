@@ -80,6 +80,58 @@ WantedBy=sockets.target
 
 Don't forget to enable and start the services after you are done configuring.
 
+### Create credentials
+
+Wallhack uses systemd credentials to access secrets. Both server and client expect the creds to be at `/etc/wallhack`.
+
+The server needs the following content:
+
+``` yaml
+# Private key.
+key: |
+  -----BEGIN PRIVATE KEY-----
+  [...]
+  -----END PRIVATE KEY-----
+
+
+# Certificates. You can add multiple if you need a chain.
+cert: |
+  -----BEGIN CERTIFICATE-----
+  [...]
+  -----END CERTIFICATE-----
+  -----BEGIN CERTIFICATE-----
+  [...]
+  -----END CERTIFICATE-----
+
+
+# CA certificate used to validate clients.
+ca: |
+  -----BEGIN CERTIFICATE-----
+  [...]
+  -----END CERTIFICATE-----
+```
+
+The client needs:
+
+``` yaml
+# Client cert.
+cert: |
+  -----BEGIN CERTIFICATE-----
+  [...]
+  -----END CERTIFICATE-----
+
+
+# Client private key.
+key: |
+  -----BEGIN PRIVATE KEY-----
+  [...]
+  -----END PRIVATE KEY-----
+
+```
+
+To create a credential file, store the content somewhere like `/tmp/wallhack` and run 
+`systemd-creds encrypt /tmp/wallhack /etc/wallhack`.
+
 ### Provide the wallhack binary
 
 Run `build.sh` in the root of this project and put the resulting `bin/wallhack` at `/usr/bin/wallhack` onto 
