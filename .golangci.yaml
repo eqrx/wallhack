@@ -17,7 +17,6 @@ linters:
     - errchkjson
     - errorlint
     - exportloopref
-    - forcetypeassert
     - funlen
     - gci
     - gochecknoglobals
@@ -26,12 +25,10 @@ linters:
     - gocritic
     - gocyclo
     - godot
-    - goerr113
     - gofmt
     - gofumpt
     - goheader
     - goimports
-    - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -42,7 +39,6 @@ linters:
     - ifshort
     - importas
     - ineffassign
-    - ireturn
     - lll
     - maintidx
     - makezero
@@ -75,7 +71,6 @@ linters:
     - varnamelen
     - wastedassign
     - whitespace
-    - wrapcheck
     - errname
     - exhaustive
     - forbidigo
@@ -85,10 +80,15 @@ linters:
     - tagliatelle
     - wsl
     # - exhaustivestruct # Not for general usage.
+    # - forcetypeassert
+    # - goerr113
     # - golint # Deprecated.
+    # - gomnd
     # - interfacer # Deprecated.
+    # - ireturn
     # - maligned # Deprecated.
     # - scopelint # Deprecated.
+    # - wrapcheck
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0

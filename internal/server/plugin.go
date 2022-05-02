@@ -21,7 +21,7 @@ import (
 	"eqrx.net/wallhack"
 )
 
-func loadPlugin() (wallhack.Plugin, error) { //nolint:ireturn
+func loadPlugin() (wallhack.Plugin, error) {
 	path, pluginSet := os.LookupEnv(wallhack.PluginPathEnvName)
 	if !pluginSet {
 		return nil, nil
@@ -37,5 +37,5 @@ func loadPlugin() (wallhack.Plugin, error) { //nolint:ireturn
 		return nil, fmt.Errorf("lookup http plugin server setup symbol: %w", err)
 	}
 
-	return newPluginSymbol.(func() interface{})().(wallhack.Plugin), nil //nolint:forcetypeassert
+	return newPluginSymbol.(func() interface{})().(wallhack.Plugin), nil
 }

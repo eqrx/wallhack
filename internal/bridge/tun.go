@@ -16,7 +16,6 @@ package bridge
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -43,14 +42,10 @@ const (
 	tunPath = "/dev/net/tun"
 )
 
-var (
-	// errIoctl indicates that our ioctl failed.
-	errIoctl = errors.New("ioctl failed")
-	// errNameTooLong indicates that the given tun name is too long.
-	errNameTooLong = fmt.Errorf("tun name is longer than %d bytes", IfaceNameMaxLen)
+/*
 	// ErrMTU indicates that a packet is too large for the tun MTU.
 	ErrMTU = errors.New("packet too large for MTU")
-)
+)*/
 
 // request is the ioctl request payload.
 type request struct {
@@ -67,7 +62,7 @@ func newTunRequest(name string, flags requestFlag) ([]byte, error) {
 	nameBytes := []byte(name)
 
 	if len(nameBytes) > len(request.name) {
-		return nil, fmt.Errorf("%w: %d", errNameTooLong, len(nameBytes))
+		return nil, fmt.Errorf("tun name is longer than %d bytes: %d", IfaceNameMaxLen, len(nameBytes))
 	}
 
 	copy(request.name[:], nameBytes)
@@ -112,16 +107,16 @@ func newTun(ifaceName string) (*tun, error) {
 	}
 
 	// Unholy-ish magic to get a C pointer for ioctl call.
-	reqPtr := uintptr(unsafe.Pointer(&req[0])) //nolint:gosec // Needed for ioctl.
+	reqPtr := uintptr(unsafe.Pointer(&req[0])) //nolint:gosec
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(tunFD), ioctlNumber, reqPtr)
 
 	if errno != 0 {
 		if closeErr := unix.Close(tunFD); closeErr != nil {
-			return nil, fmt.Errorf("%w: code %v. close tun device after error: %v", errIoctl, errno, closeErr)
+			return nil, fmt.Errorf("ioctl failed: code %w. close tun device after error: %v", errno, closeErr)
 		}
 
-		return nil, fmt.Errorf("%w: code %v", errIoctl, errno)
+		return nil, fmt.Errorf("ioctl failed: code %w", errno)
 	}
 
 	return &tun{os.NewFile(uintptr(tunFD), tunPath), iface.MTU}, nil
@@ -155,7 +150,7 @@ func (t *tun) readIPFrame() ([]byte, error) {
 // writeIPFrame writes an IP frame to the tun and returns any io error.
 func (t *tun) writeIPFrame(packet []byte) error {
 	if len(packet) > t.mtu {
-		return fmt.Errorf("%w: MTU is %d, packet size is %d", ErrMTU, t.mtu, len(packet))
+		return fmt.Errorf("MTU is %d, packet size is %d", t.mtu, len(packet))
 	}
 
 	bytesWritten, err := t.f.Write(packet)

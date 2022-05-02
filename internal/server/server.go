@@ -20,7 +20,6 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
-	"errors"
 	"fmt"
 
 	"eqrx.net/rungroup"
@@ -28,8 +27,6 @@ import (
 	"eqrx.net/wallhack/internal/server/listener"
 	"github.com/go-logr/logr"
 )
-
-var errNoCA = errors.New("no CA given")
 
 // Server represents the credentials for running in server mode.
 type Server struct {
@@ -46,7 +43,7 @@ func (s Server) tlsConf() (*tls.Config, error) {
 
 	clientCAs := x509.NewCertPool()
 	if !clientCAs.AppendCertsFromPEM([]byte(s.CA)) {
-		return nil, errNoCA
+		return nil, fmt.Errorf("no CA given")
 	}
 
 	config := &tls.Config{

@@ -56,7 +56,7 @@ func (l *Listener) acceptBackend(backend net.Listener, log logr.Logger) func(con
 				return fmt.Errorf("backend accept: %w", err)
 			}
 
-			tlsConn := conn.(*tls.Conn) //nolint:forcetypeassert
+			tlsConn := conn.(*tls.Conn)
 			if err := tlsConn.HandshakeContext(ctx); err != nil {
 				log.Error(err, "tls handshake")
 

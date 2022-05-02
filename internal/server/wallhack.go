@@ -43,7 +43,7 @@ func serveListener(log logr.Logger, listener net.Listener) func(context.Context)
 				conn, err := listener.Accept()
 				switch {
 				case err == nil:
-					group.Go(serveConn(log, conn.(*tls.Conn))) //nolint:forcetypeassert
+					group.Go(serveConn(log, conn.(*tls.Conn)))
 				case errors.Is(err, net.ErrClosed):
 					return nil
 				default:

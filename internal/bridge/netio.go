@@ -23,7 +23,6 @@ const maxFrameSize = int(^uint16(0))
 
 // writeIPFrame writes a complete IP frame given via data and returns any io error encountered. This is done by first
 // sending the size of the IP frame as a uint16 and then the actual frame.
-//nolint:gomnd // Byte shifting.
 func writeIPFrame(dst io.Writer, src []byte) error {
 	fLen := len(src)
 	if fLen > maxFrameSize {
