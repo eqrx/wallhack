@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	eqrx.net/rungroup v0.0.9
-	eqrx.net/service v0.0.3
+	eqrx.net/service v0.0.4
 	github.com/go-logr/logr v1.2.3
 	golang.org/x/sys v0.0.0-20220429233432-b5fbb4746d32
 )

@@ -59,7 +59,7 @@ func (s Server) tlsConf() (*tls.Config, error) {
 }
 
 // Run wallhack in server mode.
-func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+func (s Server) Run(ctx context.Context, log logr.Logger, service service.Service) error {
 	tlsConfig, err := s.tlsConf()
 	if err != nil {
 		return fmt.Errorf("could not setup tls: %w", err)

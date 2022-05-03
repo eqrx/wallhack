@@ -63,7 +63,7 @@ func (c Client) tlsConf() (*tls.Config, error) {
 }
 
 // Run this instance in client mode.
-func (c Client) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+func (c Client) Run(ctx context.Context, log logr.Logger, service service.Service) error {
 	serverAddr, _ := os.LookupEnv(ServerEnvName)
 
 	if _, _, err := net.SplitHostPort(serverAddr); err != nil {
@@ -88,7 +88,7 @@ func (c Client) Run(ctx context.Context, log logr.Logger, service *service.Servi
 // dial attempts to dial with dialer to the server behind serverName until canceled.
 // On success a local tun is opened and all packets arriving on it will be streamed over conn
 // and vice versa. Returns any unexpected errors.
-func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer *tls.Dialer, serverName string) error {
+func dial(ctx context.Context, log logr.Logger, service service.Service, dialer *tls.Dialer, serverName string) error {
 	for {
 		_ = service.MarkStatus("dialing to " + serverName)
 		conn, err := dialer.DialContext(ctx, "tcp4", serverName)

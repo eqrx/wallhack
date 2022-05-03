@@ -26,13 +26,13 @@ import (
 )
 
 // Run wallhack.
-func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+func Run(ctx context.Context, log logr.Logger, service service.Service) error {
 	isServer := flag.Bool("server", false, "run in server mode")
 	flag.Parse()
 
 	if *isServer {
 		var server server.Server
-		if err := service.UnmarshalYAMLCreds(&server, "wallhack"); err != nil {
+		if err := service.UnmarshalYAMLCreds("wallhack", &server); err != nil {
 			return fmt.Errorf("could not unmarshal credentials: %w", err)
 		}
 
@@ -44,7 +44,7 @@ func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
 	}
 
 	var client client.Client
-	if err := service.UnmarshalYAMLCreds(&client, "wallhack"); err != nil {
+	if err := service.UnmarshalYAMLCreds("wallhack", &client); err != nil {
 		return fmt.Errorf("could not unmarshal credentials: %w", err)
 	}
 
