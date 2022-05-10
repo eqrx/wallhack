@@ -17,7 +17,7 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-go-
       - uses: golangci/golangci-lint-action@v3
-        with: { version: v1.45.2 }
+        with: { version: v1.46.0 }
   build:
     name: build
     runs-on: ubuntu-latest

@@ -107,7 +107,7 @@ func newTun(ifaceName string) (*tun, error) {
 	}
 
 	// Unholy-ish magic to get a C pointer for ioctl call.
-	reqPtr := uintptr(unsafe.Pointer(&req[0])) //nolint:gosec
+	reqPtr := uintptr(unsafe.Pointer(&req[0]))
 
 	_, _, errno := unix.Syscall(unix.SYS_IOCTL, uintptr(tunFD), ioctlNumber, reqPtr)
 

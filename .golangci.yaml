@@ -15,20 +15,31 @@ linters:
     - durationcheck
     - errcheck
     - errchkjson
+    - errname
     - errorlint
+    - exhaustive
+    # - exhaustivestruct # Deprecated.
+    # - exhaustruct
     - exportloopref
+    - forbidigo
+    # - forcetypeassert
     - funlen
     - gci
     - gochecknoglobals
     - gochecknoinits
     - gocognit
+    - goconst
     - gocritic
     - gocyclo
     - godot
+    - godox
+    # - goerr113
     - gofmt
     - gofumpt
     - goheader
     - goimports
+    # - golint # Deprecated.
+    # - gomnd
     - gomoddirectives
     - gomodguard
     - goprintffuncname
@@ -39,9 +50,12 @@ linters:
     - ifshort
     - importas
     - ineffassign
+    # - interfacer # Deprecated.
+    # - ireturn
     - lll
     - maintidx
     - makezero
+    # - maligned # Deprecated.
     - misspell
     - nakedret
     - nestif
@@ -50,15 +64,20 @@ linters:
     - nlreturn
     - noctx
     - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
     - paralleltest
     - prealloc
     - predeclared
+    - promlinter
     - revive
     - rowserrcheck
+    # - scopelint # Deprecated.
     - sqlclosecheck
     - staticcheck
     - structcheck
     - stylecheck
+    - tagliatelle
     - tenv
     - testpackage
     - thelper
@@ -71,24 +90,8 @@ linters:
     - varnamelen
     - wastedassign
     - whitespace
-    - errname
-    - exhaustive
-    - forbidigo
-    - goconst
-    - godox
-    - promlinter
-    - tagliatelle
-    - wsl
-    # - exhaustivestruct # Not for general usage.
-    # - forcetypeassert
-    # - goerr113
-    # - golint # Deprecated.
-    # - gomnd
-    # - interfacer # Deprecated.
-    # - ireturn
-    # - maligned # Deprecated.
-    # - scopelint # Deprecated.
     # - wrapcheck
+    - wsl
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
@@ -96,11 +99,14 @@ issues:
     - EXC0001 # Do not ignore errors.
     - EXC0002 # Actually require docs for exports.
     - EXC0003 # Don't name packages "test".
-    - EXC0004 # Unsafe pointer is worth a "nolint".
+    # - EXC0004 # Unsafe pointers.
     - EXC0005 # No ineffective breaks.
-    - EXC0006 # Unsafe pointer is worth a "nolint".
-    - EXC0009 # File permissions are important.
-    - EXC0011 # Comment style checks.
+    # - EXC0006 # Unsafe pointers.
+    # - EXC0007 # exec calls with variables.
+    # - EXC0008 # Duplicates.
+    - EXC0009 # File permissions.
+    # - EXC0010 # File inclusion via variable.
+    # - EXC0011 # Comment style checks.
     - EXC0012 # Actually require docs for exports.
     - EXC0013 # Actually require docs for exports.
     - EXC0014 # Actually require docs for exports.
