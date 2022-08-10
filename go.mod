@@ -4,12 +4,13 @@ go 1.18
 
 require (
 	eqrx.net/rungroup v0.0.9
-	eqrx.net/service v0.0.4
+	eqrx.net/service v0.0.5
 	github.com/go-logr/logr v1.2.3
-	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
+	golang.org/x/sys v0.0.0-20220808155132-1c4a2a72c664
 )
 
 require (
 	eqrx.net/journalr v0.0.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	github.com/magefile/mage v1.13.0 // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
