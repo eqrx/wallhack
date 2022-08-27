@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 
 	"eqrx.net/rungroup"
@@ -27,6 +28,8 @@ import (
 	"eqrx.net/wallhack/internal/server/listener"
 	"github.com/go-logr/logr"
 )
+
+var errCaMissing = errors.New("no CA configured")
 
 // Server represents the credentials for running in server mode.
 type Server struct {
@@ -38,12 +41,12 @@ type Server struct {
 func (s Server) tlsConf() (*tls.Config, error) {
 	cert, err := tls.X509KeyPair([]byte(s.Cert), []byte(s.Key))
 	if err != nil {
-		return nil, fmt.Errorf("parse cert: %w", err)
+		return nil, fmt.Errorf("tls conf: load certs: %w", err)
 	}
 
 	clientCAs := x509.NewCertPool()
 	if !clientCAs.AppendCertsFromPEM([]byte(s.CA)) {
-		return nil, fmt.Errorf("no CA given")
+		return nil, errCaMissing
 	}
 
 	config := &tls.Config{
@@ -59,16 +62,13 @@ func (s Server) tlsConf() (*tls.Config, error) {
 }
 
 // Run wallhack in server mode.
-func (s Server) Run(ctx context.Context, log logr.Logger, service service.Service) error {
+func (s Server) Run(ctx context.Context, log logr.Logger) error {
 	tlsConfig, err := s.tlsConf()
 	if err != nil {
-		return fmt.Errorf("could not setup tls: %w", err)
+		return fmt.Errorf("server: %w", err)
 	}
 
-	listeners, err := service.Listeners()
-	if err != nil {
-		return fmt.Errorf("no listeners: %w", err)
-	}
+	listeners := service.Instance().Listeners()
 
 	plugin, err := loadPlugin()
 	if err != nil {
@@ -81,31 +81,32 @@ func (s Server) Run(ctx context.Context, log logr.Logger, service service.Servic
 		pluginTLSConfig.Certificates = []tls.Certificate{tlsConfig.Certificates[0]}
 	}
 
-	group := rungroup.New(ctx)
-
 	comboListener := listener.New(listeners, tlsConfig, pluginTLSConfig)
 
-	group.Go(comboListener.Listen(log))
+	group := rungroup.New(ctx)
+	group.Go(func(ctx context.Context) error {
+		if err := comboListener.Listen(ctx, log); err != nil {
+			return fmt.Errorf("combo listener: %w", err)
+		}
 
-	group.Go(serveListener(log, comboListener.WallhackListener()))
+		return nil
+	})
+	group.Go(func(ctx context.Context) error { return accept(ctx, log, comboListener.WallhackListener()) })
 
 	if plugin != nil {
 		group.Go(func(ctx context.Context) error {
 			if err := plugin.Listen(ctx, comboListener.PluginListener()); err != nil {
-				return fmt.Errorf("plugin serve: %w", err)
+				return fmt.Errorf("plugin listen: %w", err)
 			}
 
 			return nil
 		})
 	}
 
-	_ = service.MarkReady()
-	_ = service.MarkStatus("listening")
-
-	defer func() { _ = service.MarkStopping() }()
+	group.Go(service.Instance().RunNotify)
 
 	if err := group.Wait(); err != nil {
-		return fmt.Errorf("listening group failed: %w", err)
+		return fmt.Errorf("server: %w", err)
 	}
 
 	return nil

@@ -1,15 +1,17 @@
 module eqrx.net/wallhack
 
-go 1.18
+go 1.19
 
 require (
-	eqrx.net/rungroup v0.0.9
-	eqrx.net/service v0.0.4
+	eqrx.net/rungroup v0.0.10
+	eqrx.net/service v0.0.5
 	github.com/go-logr/logr v1.2.3
-	golang.org/x/sys v0.0.0-20220503163025-988cb79eb6c6
+	github.com/magefile/mage v1.13.0
+	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
+	golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64
 )
 
 require (
 	eqrx.net/journalr v0.0.1 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 )

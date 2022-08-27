@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Alexander Sowitzki
+// Copyright (C) 2022 Alexander Sowitzki
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -11,10 +11,12 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
+// Package main contains the entry point for wallhack server and client.
 package main
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/signal"
@@ -25,21 +27,25 @@ import (
 )
 
 func main() {
-	service, err := service.New()
-	if err != nil {
+	var err error
+
+	if err := service.Setup(); err != nil {
 		fmt.Fprintf(os.Stderr, "systemd: %v", err)
 		os.Exit(1)
 	}
 
-	log := service.Journal()
+	log := service.Instance().Journal()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
 
-	err = internal.Run(ctx, log, service)
+	err = internal.Run(ctx, log)
 
 	cancel()
 
-	if err != nil {
+	switch {
+	case err == nil:
+	case errors.Is(err, ctx.Err()):
+	default:
 		log.Error(err, "main")
 
 		os.Exit(1)

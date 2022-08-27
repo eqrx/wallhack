@@ -1,4 +1,4 @@
-// Copyright (C) 2021 Alexander Sowitzki
+// Copyright (C) 2022 Alexander Sowitzki
 //
 // This program is free software: you can redistribute it and/or modify it under the terms of the
 // GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
@@ -16,75 +16,64 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io"
-	"net"
-	"os"
 
 	"eqrx.net/rungroup"
-	"github.com/go-logr/logr"
+	"eqrx.net/wallhack/internal/packet"
 )
 
-// Connect attaches to the linux tun named as in tunIfaceName and exchanges its packets over
-// the given conn with another Connect instance. Any errors are returned. Packets transmitted
-// over the conn are prepended with a uint16 indicating the full length of the following packet.
-func Connect(ctx context.Context, log logr.Logger, conn net.Conn, tunIfaceName string) error {
-	tun, err := newTun(tunIfaceName)
-	if err != nil {
-		return fmt.Errorf("setup tun: %w", err)
+type (
+	// Reader allows reading IP packets.
+	Reader interface {
+		ReadPacket() (*packet.Packet, error)
 	}
 
+	// Writer allows writing IP packets.
+	Writer interface {
+		WritePacket(*packet.Packet) error
+	}
+
+	// ReadWriteCloser allows reading and writing IP packets and implements [io.Closer].
+	ReadWriteCloser interface {
+		io.Closer
+		Reader
+		Writer
+	}
+)
+
+// Bridge given streams left and right together by reading IPpackets from both and writing
+// them to the other.
+func Bridge(ctx context.Context, left, right ReadWriteCloser) error {
 	group := rungroup.New(ctx)
 
-	group.Go(func(ctx context.Context) error {
-		<-ctx.Done()
+	group.Go(func(ctx context.Context) error { return closer(ctx, left) })
+	group.Go(func(ctx context.Context) error { return closer(ctx, right) })
+	group.Go(func(_ context.Context) error { return simplex(left, right) })
+	group.Go(func(_ context.Context) error { return simplex(right, left) })
 
-		if err := tun.close(); err != nil {
-			return fmt.Errorf("close tun: %w", err)
-		}
+	return fmt.Errorf("bridge: %w", group.Wait())
+}
 
-		return nil
-	})
+func closer(ctx context.Context, c io.Closer) error {
+	<-ctx.Done()
 
-	group.Go(func(context.Context) error {
-		reader := func() ([]byte, error) { return readIPFrame(conn) }
-		transportFrames(log.WithName("tun<-bridge"), tun.writeIPFrame, reader)
-
-		return nil
-	})
-	group.Go(func(context.Context) error {
-		writer := func(packet []byte) error { return writeIPFrame(conn, packet) }
-		transportFrames(log.WithName("bridge<-tun"), writer, tun.readIPFrame)
-
-		return nil
-	})
-
-	if err := group.Wait(); err != nil {
-		return fmt.Errorf("bridge conn and tun group: %w", err)
+	if err := c.Close(); err != nil {
+		return fmt.Errorf("close: %w", err)
 	}
 
 	return nil
 }
 
-// transportFrames reads frames from src and writes them to dst. Returns on any error.
-func transportFrames(log logr.Logger, writer func([]byte) error, reader func() ([]byte, error)) {
+func simplex(dst Writer, src Reader) error {
 	for {
-		frame, err := reader()
+		packet, err := src.ReadPacket()
 		if err != nil {
-			if !errors.Is(err, net.ErrClosed) && !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) {
-				log.Error(err, "could not read frame")
-			}
-
-			return
+			return fmt.Errorf("read: %w", err)
 		}
 
-		if err := writer(frame); err != nil {
-			if !errors.Is(err, net.ErrClosed) && !errors.Is(err, io.EOF) && !errors.Is(err, os.ErrClosed) {
-				log.Error(err, "could not write frame")
-			}
-
-			return
+		if err = dst.WritePacket(packet); err != nil {
+			return fmt.Errorf("write: %w", err)
 		}
 	}
 }

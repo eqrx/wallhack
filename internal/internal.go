@@ -26,30 +26,30 @@ import (
 )
 
 // Run wallhack.
-func Run(ctx context.Context, log logr.Logger, service service.Service) error {
+func Run(ctx context.Context, log logr.Logger) error {
 	isServer := flag.Bool("server", false, "run in server mode")
 	flag.Parse()
 
 	if *isServer {
 		var server server.Server
-		if err := service.UnmarshalYAMLCreds("wallhack", &server); err != nil {
-			return fmt.Errorf("could not unmarshal credentials: %w", err)
+		if err := service.Instance().UnmarshalYAMLCreds("wallhack", &server); err != nil {
+			return fmt.Errorf("wallhack: %w", err)
 		}
 
-		if err := server.Run(ctx, log.WithName("server"), service); err != nil {
-			return fmt.Errorf("server run failed: %w", err)
+		if err := server.Run(ctx, log.WithName("server")); err != nil {
+			return fmt.Errorf("wallhack: %w", err)
 		}
 
 		return nil
 	}
 
 	var client client.Client
-	if err := service.UnmarshalYAMLCreds("wallhack", &client); err != nil {
-		return fmt.Errorf("could not unmarshal credentials: %w", err)
+	if err := service.Instance().UnmarshalYAMLCreds("wallhack", &client); err != nil {
+		return fmt.Errorf("wallhack: %w", err)
 	}
 
-	if err := client.Run(ctx, log.WithName("client"), service); err != nil {
-		return fmt.Errorf("client  failed: %w", err)
+	if err := client.Run(ctx, log.WithName("client")); err != nil {
+		return fmt.Errorf("wallhack:: %w", err)
 	}
 
 	return nil

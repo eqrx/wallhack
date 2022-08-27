@@ -14,28 +14,45 @@
 package server
 
 import (
+	"context"
+	"crypto/tls"
 	"fmt"
+	"net"
 	"os"
 	"plugin"
-
-	"eqrx.net/wallhack"
 )
 
-func loadPlugin() (wallhack.Plugin, error) {
-	path, pluginSet := os.LookupEnv(wallhack.PluginPathEnvName)
+// Plugin defines what methods a wallhack plugin needs to implement.
+type Plugin interface {
+	TLSConfig() *tls.Config
+	Listen(context.Context, net.Listener) error
+}
+
+const (
+	// PluginPathEnvName is the environment name that contains the path to a go plugin that is loaded by wallhack
+	// for serving extra stuff.
+	PluginPathEnvName = "WALLHACK_PLUGIN_PATH"
+
+	// PluginNewSymbolName is the name of the symbol within the plugin that is responsible for
+	// returning the Plugin interface.
+	PluginNewSymbolName = "New"
+)
+
+func loadPlugin() (Plugin, error) { //nolint:ireturn
+	path, pluginSet := os.LookupEnv(PluginPathEnvName)
 	if !pluginSet {
-		return nil, nil
+		return nil, nil //nolint:nilnil
 	}
 
 	plugin, err := plugin.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("open http plugin: %w", err)
+		return nil, fmt.Errorf("load server plugin: %w", err)
 	}
 
-	newPluginSymbol, err := plugin.Lookup(wallhack.PluginNewSymbolName)
+	newPluginSymbol, err := plugin.Lookup(PluginNewSymbolName)
 	if err != nil {
-		return nil, fmt.Errorf("lookup http plugin server setup symbol: %w", err)
+		return nil, fmt.Errorf("load server plugin: %w", err)
 	}
 
-	return newPluginSymbol.(func() interface{})().(wallhack.Plugin), nil
+	return newPluginSymbol.(func() interface{})().(Plugin), nil
 }

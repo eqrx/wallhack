@@ -43,89 +43,83 @@ func (l *Listener) pickSink(state tls.ConnectionState) chan<- net.Conn {
 	}
 }
 
-func (l *Listener) acceptBackend(backend net.Listener, log logr.Logger) func(context.Context) error {
-	return func(ctx context.Context) error {
-		for {
-			conn, err := backend.Accept()
+func (l *Listener) acceptBackend(ctx context.Context, backend net.Listener, log logr.Logger) error {
+	for {
+		conn, err := backend.Accept()
 
-			switch {
-			case err == nil:
-			case errors.Is(err, net.ErrClosed):
-				return nil
-			default:
-				return fmt.Errorf("backend accept: %w", err)
+		switch {
+		case err == nil:
+		case errors.Is(err, net.ErrClosed):
+			return nil
+		default:
+			return fmt.Errorf("accept backend: %w", err)
+		}
+
+		tlsConn := conn.(*tls.Conn)
+		if err := tlsConn.HandshakeContext(ctx); err != nil {
+			log.Error(err, "tls handshake")
+
+			continue
+		}
+
+		sink := l.pickSink(tlsConn.ConnectionState())
+
+		select {
+		case <-ctx.Done():
+			if err := conn.Close(); err != nil {
+				return fmt.Errorf("accept backend: %w", err)
 			}
 
-			tlsConn := conn.(*tls.Conn)
-			if err := tlsConn.HandshakeContext(ctx); err != nil {
-				log.Error(err, "tls handshake")
-
-				continue
-			}
-
-			sink := l.pickSink(tlsConn.ConnectionState())
-
-			select {
-			case <-ctx.Done():
-				if err := conn.Close(); err != nil {
-					return fmt.Errorf("close conn: %w", err)
-				}
-
-				return nil
-			case sink <- conn:
-			}
+			return nil
+		case sink <- conn:
 		}
 	}
 }
 
-func (l *Listener) acceptBackends(log logr.Logger) func(context.Context) error {
-	return func(ctx context.Context) error {
-		backendGroup := rungroup.New(ctx)
+func (l *Listener) acceptBackends(ctx context.Context, log logr.Logger) error {
+	backendGroup := rungroup.New(ctx)
 
-		for i := range l.backends {
-			backend := l.backends[i]
+	for i := range l.backends {
+		backend := l.backends[i]
 
-			backendGroup.Go(func(ctx context.Context) error {
-				<-ctx.Done()
-
-				if err := backend.Close(); err != nil {
-					return fmt.Errorf("close backend: %w", err)
-				}
-
-				return nil
-			})
-
-			backendGroup.Go(l.acceptBackend(backend, log))
-		}
-
-		if err := backendGroup.Wait(); err != nil {
-			return err
-		}
-
-		return nil
-	}
-}
-
-// Listen returns a rungroup compatible method that listens on the
-// configured backends an shoves connections into wallhack and plugin.
-func (l *Listener) Listen(log logr.Logger) func(context.Context) error {
-	return func(ctx context.Context) error {
-		rootGroup := rungroup.New(ctx)
-		rootGroup.Go(func(ctx context.Context) error {
+		backendGroup.Go(func(ctx context.Context) error {
 			<-ctx.Done()
 
-			close(l.wallhackFrontend.conns)
-			close(l.pluginFrontend.conns)
+			if err := backend.Close(); err != nil {
+				return fmt.Errorf("close: %w", err)
+			}
 
 			return nil
 		})
 
-		rootGroup.Go(l.acceptBackends(log))
+		backendGroup.Go(func(ctx context.Context) error { return l.acceptBackend(ctx, backend, log) })
+	}
 
-		if err := rootGroup.Wait(); err != nil {
-			return err
-		}
+	if err := backendGroup.Wait(); err != nil {
+		return fmt.Errorf("accept backends: %w", err)
+	}
+
+	return nil
+}
+
+// Listen returns a rungroup compatible method that listens on the
+// configured backends an shoves connections into wallhack and plugin.
+func (l *Listener) Listen(ctx context.Context, log logr.Logger) error {
+	rootGroup := rungroup.New(ctx)
+	rootGroup.Go(func(ctx context.Context) error {
+		<-ctx.Done()
+
+		close(l.wallhackFrontend.conns)
+		close(l.pluginFrontend.conns)
 
 		return nil
+	})
+
+	rootGroup.Go(func(ctx context.Context) error { return l.acceptBackends(ctx, log) })
+
+	if err := rootGroup.Wait(); err != nil {
+		return fmt.Errorf("listen: %w", err)
 	}
+
+	return nil
 }

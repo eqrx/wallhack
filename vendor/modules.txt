@@ -1,0 +1,34 @@
+# eqrx.net/journalr v0.0.1
+## explicit; go 1.18
+eqrx.net/journalr
+# eqrx.net/rungroup v0.0.10
+## explicit; go 1.19
+eqrx.net/rungroup
+# eqrx.net/service v0.0.5
+## explicit; go 1.19
+eqrx.net/service
+eqrx.net/service/socket
+# github.com/go-logr/logr v1.2.3
+## explicit; go 1.16
+github.com/go-logr/logr
+# github.com/magefile/mage v1.13.0
+## explicit; go 1.12
+github.com/magefile/mage/internal
+github.com/magefile/mage/mage
+github.com/magefile/mage/mg
+github.com/magefile/mage/parse
+github.com/magefile/mage/sh
+# golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b
+## explicit; go 1.17
+golang.org/x/net/bpf
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/ipv6
+# golang.org/x/sys v0.0.0-20220825204002-c680a09ffe64
+## explicit; go 1.17
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# gopkg.in/yaml.v3 v3.0.1
+## explicit
+gopkg.in/yaml.v3
