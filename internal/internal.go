@@ -26,17 +26,17 @@ import (
 )
 
 // Run wallhack.
-func Run(ctx context.Context, log logr.Logger) error {
+func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
 	isServer := flag.Bool("server", false, "run in server mode")
 	flag.Parse()
 
 	if *isServer {
 		var server server.Server
-		if err := service.Instance().UnmarshalYAMLCreds("wallhack", &server); err != nil {
+		if err := service.UnmarshalYAMLCreds("wallhack", &server); err != nil {
 			return fmt.Errorf("wallhack: %w", err)
 		}
 
-		if err := server.Run(ctx, log.WithName("server")); err != nil {
+		if err := server.Run(ctx, log.WithName("server"), service); err != nil {
 			return fmt.Errorf("wallhack: %w", err)
 		}
 
@@ -44,11 +44,11 @@ func Run(ctx context.Context, log logr.Logger) error {
 	}
 
 	var client client.Client
-	if err := service.Instance().UnmarshalYAMLCreds("wallhack", &client); err != nil {
+	if err := service.UnmarshalYAMLCreds("wallhack", &client); err != nil {
 		return fmt.Errorf("wallhack: %w", err)
 	}
 
-	if err := client.Run(ctx, log.WithName("client")); err != nil {
+	if err := client.Run(ctx, log.WithName("client"), service); err != nil {
 		return fmt.Errorf("wallhack:: %w", err)
 	}
 

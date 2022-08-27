@@ -27,18 +27,17 @@ import (
 )
 
 func main() {
-	var err error
-
-	if err := service.Setup(); err != nil {
+	service, err := service.New()
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "systemd: %v", err)
 		os.Exit(1)
 	}
 
-	log := service.Instance().Journal()
+	log := service.Journal()
 
 	ctx, cancel := signal.NotifyContext(context.Background(), unix.SIGTERM, unix.SIGINT)
 
-	err = internal.Run(ctx, log)
+	err = internal.Run(ctx, log, service)
 
 	cancel()
 

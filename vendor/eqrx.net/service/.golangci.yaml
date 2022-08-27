@@ -6,8 +6,8 @@ linters:
     - bidichk
     - bodyclose
     - containedctx
+    - contextcheck
     - cyclop
-    - deadcode
     - decorder
     - depguard
     - dogsled
@@ -26,6 +26,7 @@ linters:
     - funlen
     - gci
     - gochecknoinits
+    # - gochecknoglobals # Need globals here.
     - gocognit
     - goconst
     - gocritic
@@ -47,8 +48,9 @@ linters:
     - grouper
     - importas
     - ineffassign
+    - interfacebloat
     - ireturn
-    - lll
+    - logrlint
     - maintidx
     - makezero
     - misspell
@@ -60,12 +62,12 @@ linters:
     - noctx
     - nolintlint
     - nonamedreturns
-    - nosnakecase
     - nosprintfhostport
     - paralleltest
     - prealloc
     - predeclared
     - promlinter
+    - reassign
     - revive
     - staticcheck
     - stylecheck
@@ -79,7 +81,6 @@ linters:
     - unparam
     - unused
     - usestdlibvars
-    - varcheck
     - varnamelen
     - whitespace
     - wrapcheck

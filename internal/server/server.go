@@ -62,13 +62,13 @@ func (s Server) tlsConf() (*tls.Config, error) {
 }
 
 // Run wallhack in server mode.
-func (s Server) Run(ctx context.Context, log logr.Logger) error {
+func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
 	tlsConfig, err := s.tlsConf()
 	if err != nil {
 		return fmt.Errorf("server: %w", err)
 	}
 
-	listeners := service.Instance().Listeners()
+	listeners := service.Listeners()
 
 	plugin, err := loadPlugin()
 	if err != nil {
@@ -91,7 +91,7 @@ func (s Server) Run(ctx context.Context, log logr.Logger) error {
 
 		return nil
 	})
-	group.Go(func(ctx context.Context) error { return accept(ctx, log, comboListener.WallhackListener()) })
+	group.Go(func(ctx context.Context) error { return accept(ctx, log, service, comboListener.WallhackListener()) })
 
 	if plugin != nil {
 		group.Go(func(ctx context.Context) error {
@@ -103,7 +103,7 @@ func (s Server) Run(ctx context.Context, log logr.Logger) error {
 		})
 	}
 
-	group.Go(service.Instance().RunNotify)
+	group.Go(service.RunNotify)
 
 	if err := group.Wait(); err != nil {
 		return fmt.Errorf("server: %w", err)

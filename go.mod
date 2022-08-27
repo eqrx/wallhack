@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	eqrx.net/rungroup v0.0.10
-	eqrx.net/service v0.0.5
+	eqrx.net/service v0.0.6
 	github.com/go-logr/logr v1.2.3
 	github.com/magefile/mage v1.13.0
 	golang.org/x/net v0.0.0-20220826154423-83b083e8dc8b

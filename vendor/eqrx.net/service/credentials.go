@@ -43,7 +43,7 @@ func (s Service) UnmarshalYAMLCreds(name string, dst interface{}) error {
 func UnmarshalYAMLCreds(dir, name string, dst interface{}) error {
 	credFile, err := os.Open(path.Join(dir, name))
 	if err != nil {
-		return fmt.Errorf("open cred file: %w", err)
+		return fmt.Errorf("unmarshal YAML creds: %w", err)
 	}
 
 	err = yaml.NewDecoder(credFile).Decode(dst)
@@ -52,11 +52,11 @@ func UnmarshalYAMLCreds(dir, name string, dst interface{}) error {
 
 	switch {
 	case err != nil && closeErr != nil:
-		return fmt.Errorf("decode cred: %w; close cred file: %v", err, closeErr)
+		return fmt.Errorf("unmarshal YAML creds: [%w; %v]", err, closeErr)
 	case err != nil:
-		return fmt.Errorf("decode cred: %w", err)
+		return fmt.Errorf("unmarshal YAML creds: %w", err)
 	case closeErr != nil:
-		return fmt.Errorf("close cred file: %w", closeErr)
+		return fmt.Errorf("unmarshal YAML creds: %w", closeErr)
 	default:
 		return nil
 	}

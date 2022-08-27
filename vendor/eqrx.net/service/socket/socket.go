@@ -37,7 +37,7 @@ const (
 )
 
 // ErrEnvMissing indicates a required environment variable is not set.
-var ErrEnvMissing = errors.New("environment variable missing")
+var ErrEnvMissing = errors.New("env var unset")
 
 // Listeners returnes listeners passed by systemd.
 func Listeners() ([]net.Listener, error) {
@@ -60,7 +60,7 @@ func Listeners() ([]net.Listener, error) {
 		listener, err = net.FileListener(file)
 
 		if err != nil {
-			err = fmt.Errorf("convert file to listener: %w", err)
+			err = fmt.Errorf("service listeners: %w", err)
 
 			break
 		}
@@ -68,7 +68,7 @@ func Listeners() ([]net.Listener, error) {
 		listeners = append(listeners, listener)
 
 		if err = file.Close(); err != nil {
-			err = fmt.Errorf("close listener file: %w", err)
+			err = fmt.Errorf("service listeners: %w", err)
 
 			break
 		}
@@ -97,20 +97,20 @@ func files() ([]*os.File, error) {
 	}
 
 	if err := os.Unsetenv(listenerPIDEnvName); err != nil {
-		return nil, fmt.Errorf("unset listen pid: %w", err)
+		return nil, fmt.Errorf("files: %w", err)
 	}
 
 	if err := os.Unsetenv(listenerCountEnvName); err != nil {
-		return nil, fmt.Errorf("unset listener pid: %w", err)
+		return nil, fmt.Errorf("files: %w", err)
 	}
 
 	listenerNamesStr, listenerNamesSet := os.LookupEnv(listenerNamesEnvName)
 	if !listenerNamesSet {
-		return []*os.File{}, fmt.Errorf("%w: %s", ErrEnvMissing, listenerNamesEnvName)
+		return []*os.File{}, fmt.Errorf("files: %w: %s", ErrEnvMissing, listenerNamesEnvName)
 	}
 
 	if err := os.Unsetenv(listenerNamesEnvName); err != nil {
-		return nil, fmt.Errorf("unset listener names: %w", err)
+		return nil, fmt.Errorf("files: %w", err)
 	}
 
 	listenerNames := strings.Split(listenerNamesStr, ":")
@@ -134,7 +134,7 @@ func fileCount() (int, error) {
 
 	pid, err := strconv.Atoi(pidStr)
 	if err != nil {
-		return 0, fmt.Errorf("invalid listen pid: %w", err)
+		return 0, fmt.Errorf("file count: %w", err)
 	}
 
 	if pid != os.Getpid() {
@@ -143,12 +143,12 @@ func fileCount() (int, error) {
 
 	listenerCountStr, listenerCountSet := os.LookupEnv(listenerCountEnvName)
 	if !listenerCountSet {
-		return 0, fmt.Errorf("%w: %s", ErrEnvMissing, listenerCountEnvName)
+		return 0, fmt.Errorf("file count: %w: %s", ErrEnvMissing, listenerCountEnvName)
 	}
 
 	listenerCount, err := strconv.Atoi(listenerCountStr)
 	if err != nil {
-		return 0, fmt.Errorf("invalid listen count: %w", err)
+		return 0, fmt.Errorf("file count: %w", err)
 	}
 
 	return listenerCount, nil

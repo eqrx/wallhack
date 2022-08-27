@@ -4,7 +4,7 @@ eqrx.net/journalr
 # eqrx.net/rungroup v0.0.10
 ## explicit; go 1.19
 eqrx.net/rungroup
-# eqrx.net/service v0.0.5
+# eqrx.net/service v0.0.6
 ## explicit; go 1.19
 eqrx.net/service
 eqrx.net/service/socket

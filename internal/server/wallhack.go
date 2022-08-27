@@ -29,7 +29,7 @@ import (
 	"github.com/go-logr/logr"
 )
 
-func accept(ctx context.Context, log logr.Logger, listener net.Listener) error {
+func accept(ctx context.Context, log logr.Logger, service *service.Service, listener net.Listener) error {
 	locker := sync.Mutex{}
 	bridges := map[string]context.CancelFunc{}
 
@@ -45,7 +45,7 @@ func accept(ctx context.Context, log logr.Logger, listener net.Listener) error {
 	})
 
 	group.Go(func(ctx context.Context) error {
-		_ = service.Instance().MarkStatus("listening")
+		_ = service.MarkStatus("listening")
 		for {
 			conn, err := listener.Accept()
 			switch {

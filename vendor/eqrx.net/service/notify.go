@@ -25,25 +25,25 @@ import (
 const notifySocketEnvName = "NOTIFY_SOCKET"
 
 // ErrEnvMissing indicates a required environment variable is not set.
-var ErrEnvMissing = errors.New("environment variable missing")
+var ErrEnvMissing = errors.New("env var unset")
 
 // newNotifySocket creates a new systemd notify socket.
 func newNotifySocket() (*net.UnixConn, error) {
 	notifySocket, hasNotifySocket := os.LookupEnv(notifySocketEnvName)
 
 	if !hasNotifySocket {
-		return nil, fmt.Errorf("%w: %s", ErrEnvMissing, notifySocketEnvName)
+		return nil, fmt.Errorf("new notify socket: %w: %s", ErrEnvMissing, notifySocketEnvName)
 	}
 
 	if err := os.Unsetenv(notifySocketEnvName); err != nil {
-		return nil, fmt.Errorf("unset systemd notify socket env: %w", err)
+		return nil, fmt.Errorf("new notify socket: %w", err)
 	}
 
 	socketAddr := &net.UnixAddr{Name: notifySocket, Net: "unixgram"}
 
 	notify, err := net.DialUnix(socketAddr.Net, nil, socketAddr)
 	if err != nil {
-		return nil, fmt.Errorf("open systemd notify socket: %w", err)
+		return nil, fmt.Errorf("new notify socket:%w", err)
 	}
 
 	return notify, nil
@@ -52,7 +52,7 @@ func newNotifySocket() (*net.UnixConn, error) {
 // MarkReady tells systemd that this service is ready and running.
 func (s Service) MarkReady() error {
 	if _, err := s.notify.Write([]byte("READY=1")); err != nil {
-		return fmt.Errorf("write to systemd notify: %w", err)
+		return fmt.Errorf("mark service ready: %w", err)
 	}
 
 	return nil
@@ -61,7 +61,7 @@ func (s Service) MarkReady() error {
 // MarkStopping tells systemd that this service is about to stop.
 func (s Service) MarkStopping() error {
 	if _, err := s.notify.Write([]byte("STOPPING=1")); err != nil {
-		return fmt.Errorf("write to systemd notify: %w", err)
+		return fmt.Errorf("mark service stopping: %w", err)
 	}
 
 	return nil
@@ -70,7 +70,7 @@ func (s Service) MarkStopping() error {
 // MarkStatus tells systemd that this service has the given status.
 func (s Service) MarkStatus(status string) error {
 	if _, err := s.notify.Write([]byte("STATUS=" + status)); err != nil {
-		return fmt.Errorf("write to systemd notify: %w", err)
+		return fmt.Errorf("mark service status: %w", err)
 	}
 
 	return nil
@@ -80,13 +80,13 @@ func (s Service) MarkStatus(status string) error {
 // and then marks the service as shutting down.
 func (s Service) RunNotify(ctx context.Context) error {
 	if err := s.MarkReady(); err != nil {
-		return fmt.Errorf("mark service ready: %w", err)
+		return fmt.Errorf("run service notify: %w", err)
 	}
 
 	<-ctx.Done()
 
 	if err := s.MarkStopping(); err != nil {
-		return fmt.Errorf("mark service stopping: %w", err)
+		return fmt.Errorf("run service notify: %w", err)
 	}
 
 	return nil

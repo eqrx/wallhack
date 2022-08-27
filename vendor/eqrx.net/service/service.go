@@ -72,45 +72,26 @@ func (s Service) RuntimeDirectory() string {
 	return s.runtimeDir
 }
 
-var instance Service
-
-// Instance returns the instance of [Service].
-// Panics if service is not set up.
-func Instance() Service {
-	if instance.journal == nil {
-		panic("service not set up")
-	}
-
-	return instance
-}
-
-// Setup creates a new Service instance to interface with systemd.
-// The result can be received by calling [Instance].
-func Setup() error {
-	if instance.journal != nil {
-		panic("service already set up")
-	}
-
+// New creates a new Service instance to interface with systemd.
+func New() (*Service, error) {
 	notify, err := newNotifySocket()
 	if err != nil {
-		return fmt.Errorf("systemd notify: %w", err)
+		return nil, fmt.Errorf("setup service: %w", err)
 	}
 
 	journalSink, err := journalr.NewSink()
 	if err != nil {
-		return fmt.Errorf("systemd journald: %w", err)
+		return nil, fmt.Errorf("setup service: %w", err)
 	}
 
 	listeners, err := socket.Listeners()
 	if err != nil {
-		return fmt.Errorf("systemd socket activation: %w", err)
+		return nil, fmt.Errorf("setup service: %w", err)
 	}
 
 	stateDir := os.Getenv(stateDirEnvName)
 	credsDir := os.Getenv(credDirEnvName)
 	runtimeDir := os.Getenv(runtimeDirEnvName)
 
-	instance = Service{notify, listeners, journalSink, stateDir, credsDir, runtimeDir}
-
-	return nil
+	return &Service{notify, listeners, journalSink, stateDir, credsDir, runtimeDir}, nil
 }
