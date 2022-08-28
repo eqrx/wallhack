@@ -6,7 +6,9 @@ After=wallhack-server.socket
 Type=notify
 ExecStart=/usr/bin/wallhack --server
 User=wallhack
-LoadCredentialEncrypted=wallhack:/etc/wallhack
+LoadCredentialEncrypted=key:/etc/wallhack/key
+LoadCredentialEncrypted=cert:/etc/wallhack/cert
+LoadCredentialEncrypted=ca:/etc/wallhack/ca
 CapabilityBoundingSet=
 LockPersonality=true
 MemoryDenyWriteExecute=true
@@ -31,7 +33,7 @@ RestrictSUIDSGID=true
 SecureBits=noroot-locked
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
-SystemCallFilter=~@privileged @resources
+SystemCallFilter=~@privileged
 UMask=0077
 
 [Install]

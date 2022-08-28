@@ -50,7 +50,9 @@ func accept(ctx context.Context, log logr.Logger, service *service.Service, list
 			conn, err := listener.Accept()
 			switch {
 			case err == nil:
-				group.Go(func(ctx context.Context) error { return newConn(ctx, log, conn.(*tls.Conn), &locker, bridges) }, rungroup.NoCancelOnSuccess)
+				group.Go(func(ctx context.Context) error {
+					return newConn(ctx, log, conn.(*tls.Conn), &locker, bridges)
+				}, rungroup.NoCancelOnSuccess)
 			case errors.Is(err, net.ErrClosed):
 				return nil
 			default:
@@ -67,7 +69,7 @@ func accept(ctx context.Context, log logr.Logger, service *service.Service, list
 }
 
 func newConn(ctx context.Context, log logr.Logger, conn *tls.Conn, locker sync.Locker, bridges map[string]context.CancelFunc) error {
-	log = log.WithName(conn.RemoteAddr().String())
+	log = log.WithValues("raddr", conn.RemoteAddr().String())
 	if err := conn.HandshakeContext(ctx); err != nil {
 		log.Error(err, "tls handshake")
 
@@ -82,7 +84,7 @@ func newConn(ctx context.Context, log logr.Logger, conn *tls.Conn, locker sync.L
 	}
 
 	commonName := tlsState.PeerCertificates[0].Subject.CommonName
-	log = log.WithName(commonName)
+	log = log.WithValues("cn", commonName)
 
 	tun, err := tun.New(commonName)
 	if err != nil {

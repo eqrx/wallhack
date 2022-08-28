@@ -31,21 +31,29 @@ import (
 
 var errCaMissing = errors.New("no CA configured")
 
-// Server represents the credentials for running in server mode.
-type Server struct {
-	Cert string `yaml:"cert"`
-	Key  string `yaml:"key"`
-	CA   string `yaml:"ca"`
-}
+func tlsConf(service *service.Service) (*tls.Config, error) {
+	certData, err := service.LoadCred("cert")
+	if err != nil {
+		return nil, fmt.Errorf("tls conf: %w", err)
+	}
 
-func (s Server) tlsConf() (*tls.Config, error) {
-	cert, err := tls.X509KeyPair([]byte(s.Cert), []byte(s.Key))
+	keyData, err := service.LoadCred("key")
+	if err != nil {
+		return nil, fmt.Errorf("tls conf: %w", err)
+	}
+
+	caData, err := service.LoadCred("ca")
+	if err != nil {
+		return nil, fmt.Errorf("tls conf: %w", err)
+	}
+
+	cert, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
 		return nil, fmt.Errorf("tls conf: load certs: %w", err)
 	}
 
 	clientCAs := x509.NewCertPool()
-	if !clientCAs.AppendCertsFromPEM([]byte(s.CA)) {
+	if !clientCAs.AppendCertsFromPEM(caData) {
 		return nil, errCaMissing
 	}
 
@@ -62,8 +70,8 @@ func (s Server) tlsConf() (*tls.Config, error) {
 }
 
 // Run wallhack in server mode.
-func (s Server) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
-	tlsConfig, err := s.tlsConf()
+func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+	tlsConfig, err := tlsConf(service)
 	if err != nil {
 		return fmt.Errorf("server: %w", err)
 	}

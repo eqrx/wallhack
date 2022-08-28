@@ -74,6 +74,7 @@ func formatValues(values []interface{}) string {
 // Error logs an error, with the given message and key/value pairs as
 // context.  See Logger.Error for more details.
 func (s *Sink) Error(err error, msg string, kvList ...interface{}) {
+	msg = s.name + ": " + msg
 	values := mergeValues(s.values, kvList)
 
 	if len(values) == 0 {
@@ -90,6 +91,7 @@ func (s *Sink) Error(err error, msg string, kvList ...interface{}) {
 // only be called when Enabled(level) is true. See Logger.Info for more
 // details.
 func (s *Sink) Info(level int, msg string, kvList ...interface{}) {
+	msg = s.name + ": " + msg
 	values := mergeValues(s.values, kvList)
 
 	if len(values) != 0 {

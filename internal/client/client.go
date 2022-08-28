@@ -40,16 +40,20 @@ const (
 	ServerEnvName = "WALLHACK_SERVER"
 )
 
-// Client represents the credentials for running in client mode.
-type Client struct {
-	Cert string `yaml:"cert"`
-	Key  string `yaml:"key"`
-}
-
 // TLSConf generates the TLS configuration for read credentials. It can
 // be used to connect to a wallhack server.
-func (c Client) tlsConf() (*tls.Config, error) {
-	cert, err := tls.X509KeyPair([]byte(c.Cert), []byte(c.Key))
+func tlsConf(service *service.Service) (*tls.Config, error) {
+	certData, err := service.LoadCred("cert")
+	if err != nil {
+		return nil, fmt.Errorf("tls conf: %w", err)
+	}
+
+	keyData, err := service.LoadCred("key")
+	if err != nil {
+		return nil, fmt.Errorf("tls conf: %w", err)
+	}
+
+	cert, err := tls.X509KeyPair(certData, keyData)
 	if err != nil {
 		return nil, fmt.Errorf("tls config: parse keys: %w", err)
 	}
@@ -65,14 +69,14 @@ func (c Client) tlsConf() (*tls.Config, error) {
 }
 
 // Run this instance in client mode.
-func (c Client) Run(ctx context.Context, log logr.Logger, service *service.Service) error {
+func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
 	serverAddr, _ := os.LookupEnv(ServerEnvName)
 
 	if _, _, err := net.SplitHostPort(serverAddr); err != nil {
 		return fmt.Errorf("client: %w", err)
 	}
 
-	tlsConfig, err := c.tlsConf()
+	tlsConfig, err := tlsConf(service)
 	if err != nil {
 		return fmt.Errorf("client: %w", err)
 	}
@@ -90,7 +94,9 @@ func (c Client) Run(ctx context.Context, log logr.Logger, service *service.Servi
 // and vice versa. Returns any unexpected errors.
 func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer *tls.Dialer, serverName string) error {
 	for {
-		_ = service.MarkStatus("dialing to " + serverName)
+		log.Info("dialing")
+
+		_ = service.MarkStatus("dialing")
 		conn, err := dialer.DialContext(ctx, "tcp4", serverName)
 
 		switch {
@@ -99,7 +105,8 @@ func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer
 			return fmt.Errorf("dial: %w", err)
 		case err != nil:
 			log.Error(err, "could not open tunnel, backing off")
-			_ = service.MarkStatus("backing off from " + serverName + ": " + err.Error())
+
+			_ = service.MarkStatus("backing off")
 
 			delay := time.NewTimer(backOffDelay)
 			select {
@@ -116,7 +123,9 @@ func dial(ctx context.Context, log logr.Logger, service *service.Service, dialer
 			return fmt.Errorf("dial: %w", err)
 		}
 
-		_ = service.MarkStatus("streaming to " + serverName)
+		_ = service.MarkStatus("streaming")
+
+		log.Info("streaming")
 
 		c := packet.NewReadWriteCloser(conn, packet.NewStreamReader(conn))
 		t := packet.NewReadWriteCloser(tun, packet.NewMTUReader(tun))

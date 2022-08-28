@@ -82,55 +82,20 @@ Don't forget to enable and start the services after you are done configuring.
 
 ### Create credentials
 
-Wallhack uses systemd credentials to access secrets. Both server and client expect the creds to be at `/etc/wallhack`.
+Wallhack uses systemd credentials to access secrets..
 
 The server needs the following content:
+- Private TLS key in `/etc/wallhack/key`
+- TLS Certificate chain to present to clients in `/etc/wallhack/cert`
+- CA used to verify clients in `/etc/wallhack/ca`
 
-``` yaml
-# Private key.
-key: |
-  -----BEGIN PRIVATE KEY-----
-  [...]
-  -----END PRIVATE KEY-----
-
-
-# Certificates. You can add multiple if you need a chain.
-cert: |
-  -----BEGIN CERTIFICATE-----
-  [...]
-  -----END CERTIFICATE-----
-  -----BEGIN CERTIFICATE-----
-  [...]
-  -----END CERTIFICATE-----
-
-
-# CA certificate used to validate clients.
-ca: |
-  -----BEGIN CERTIFICATE-----
-  [...]
-  -----END CERTIFICATE-----
-```
 
 The client needs:
+- Private TLS key in `/etc/wallhack/key`
+- TLS Certificate chain to present the server in `/etc/wallhack/cert`
 
-``` yaml
-# Client cert.
-cert: |
-  -----BEGIN CERTIFICATE-----
-  [...]
-  -----END CERTIFICATE-----
-
-
-# Client private key.
-key: |
-  -----BEGIN PRIVATE KEY-----
-  [...]
-  -----END PRIVATE KEY-----
-
-```
-
-To create a credential file, store the content somewhere like `/tmp/wallhack` and run 
-`systemd-creds encrypt /tmp/wallhack /etc/wallhack`.
+To create a credential file, use something like this 
+`systemd-creds encrypt <unencrypted cert file pat> /etc/wallhack/key`.
 
 ### Provide the wallhack binary
 

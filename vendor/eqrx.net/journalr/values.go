@@ -52,6 +52,7 @@ func mergeValues(oldValues, newValues []interface{}) []interface{} {
 func asSanitizedKey(key interface{}) string {
 	keyStr := key.(string)
 	keyStr = strings.ToUpper(keyStr)
+	keyStr = strings.ReplaceAll(keyStr, " ", "_")
 
 	switch key {
 	case "":

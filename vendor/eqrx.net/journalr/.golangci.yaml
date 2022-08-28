@@ -1,13 +1,13 @@
 linters:
   disable-all: true
   enable:
+    - asasalint
     - asciicheck
     - bidichk
     - bodyclose
     - containedctx
     - contextcheck
     - cyclop
-    - deadcode
     - decorder
     - depguard
     - dogsled
@@ -15,17 +15,23 @@ linters:
     - durationcheck
     - errcheck
     - errchkjson
+    - errname
     - errorlint
+    - execinquery
+    - exhaustive
     - exportloopref
+    - forbidigo
     - funlen
     - gci
+    - goerr113
     - gochecknoglobals
     - gochecknoinits
     - gocognit
+    - goconst
     - gocritic
     - gocyclo
     - godot
-    - goerr113
+    - godox
     - gofmt
     - gofumpt
     - goheader
@@ -38,10 +44,11 @@ linters:
     - gosimple
     - govet
     - grouper
-    - ifshort
     - importas
+    - interfacebloat
     - ineffassign
-    - lll
+    # - ireturn # Not useful for logr API.
+    - logrlint
     - maintidx
     - makezero
     - misspell
@@ -52,15 +59,16 @@ linters:
     - nlreturn
     - noctx
     - nolintlint
+    - nonamedreturns
+    - nosprintfhostport
     - paralleltest
     - prealloc
     - predeclared
+    - promlinter
     - revive
-    - rowserrcheck
-    - sqlclosecheck
     - staticcheck
-    - structcheck
     - stylecheck
+    - tagliatelle
     - tenv
     - testpackage
     - thelper
@@ -69,42 +77,42 @@ linters:
     - unconvert
     - unparam
     - unused
-    - varcheck
+    - usestdlibvars
     - varnamelen
-    - wastedassign
     - whitespace
     - wrapcheck
-    - errname
-    - exhaustive
-    - forbidigo
-    - goconst
-    - godox
-    - promlinter
-    - tagliatelle
     - wsl
-    # - exhaustivestruct
-    # - forcetypeassert
-    # - golint
-    # - interfacer
-    # - ireturn
-    # - maligned
-    # - scopelint
 issues:
   max-same-issues: 0
   max-issues-per-linter: 0
   include:
-    - EXC0001
-    - EXC0002
-    - EXC0003
-    - EXC0004
-    - EXC0005
-    - EXC0006
-    - EXC0007
-    - EXC0008
-    - EXC0009
-    - EXC0010
-    - EXC0011
-    - EXC0012
-    - EXC0013
-    - EXC0014
-    - EXC0015
+    - EXC0001 # Do not ignore errors.
+    - EXC0002 # Actually require docs for exports.
+    - EXC0003 # Don't name packages "test".
+    # - EXC0004 # Unsafe pointers.
+    - EXC0005 # No ineffective breaks.
+    # - EXC0006 # Unsafe pointers.
+    # - EXC0007 # exec calls with variables.
+    # - EXC0008 # Duplicates.
+    - EXC0009 # File permissions.
+    # - EXC0010 # File inclusion via variable.
+    # - EXC0011 # Comment style checks.
+    - EXC0012 # Actually require docs for exports.
+    - EXC0013 # Actually require docs for exports.
+    - EXC0014 # Actually require docs for exports.
+    - EXC0015 # Actually require docs for exports.
+linters-settings:
+  goheader:
+    template: |-
+      Copyright (C) 2022 Alexander Sowitzki
+      
+      This program is free software: you can redistribute it and/or modify it under the terms of the
+      GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or
+      (at your option) any later version.
+      
+      This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
+      warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License for more
+      details.
+      
+      You should have received a copy of the GNU Affero General Public License along with this program.
+      If not, see <https://www.gnu.org/licenses/>.

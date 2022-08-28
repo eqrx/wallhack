@@ -11,35 +11,20 @@
 // You should have received a copy of the GNU Affero General Public License along with this program.
 // If not, see <https://www.gnu.org/licenses/>.
 
-// Package internal is responsible for bootstrapping wallhack and run it.
-package internal
+//go:build mage
+// +build mage
+
+package main
 
 import (
-	"context"
-	"flag"
 	"fmt"
 
-	"eqrx.net/service"
-	"eqrx.net/wallhack/internal/client"
-	"eqrx.net/wallhack/internal/server"
-	"github.com/go-logr/logr"
+	"github.com/magefile/mage/sh"
 )
 
-// Run wallhack.
-func Run(ctx context.Context, log logr.Logger, service *service.Service) error {
-	isServer := flag.Bool("server", false, "run in server mode")
-	flag.Parse()
-
-	if *isServer {
-		if err := server.Run(ctx, log, service); err != nil {
-			return fmt.Errorf("wallhack: %w", err)
-		}
-
-		return nil
-	}
-
-	if err := client.Run(ctx, log, service); err != nil {
-		return fmt.Errorf("wallhack:: %w", err)
+func Lint() error {
+	if err := sh.RunV("golangci-lint", "run", "./..."); err != nil {
+		return fmt.Errorf("lint: %w", err)
 	}
 
 	return nil

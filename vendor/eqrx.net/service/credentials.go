@@ -30,34 +30,44 @@ func (s Service) CredPath(name string) string {
 	return s.credsDir + "/" + name
 }
 
-// UnmarshalYAMLCreds unmarshals the YAML credential file called name into dst.
-func (s Service) UnmarshalYAMLCreds(name string, dst interface{}) error {
+// LoadCred loads a credential file.
+func (s Service) LoadCred(name string) ([]byte, error) {
 	if s.credsDir == "" {
 		panic("credentials directory not set by systemd")
 	}
 
-	return UnmarshalYAMLCreds(s.credsDir, name, dst)
+	return LoadCred(s.credsDir, name)
 }
 
-// UnmarshalYAMLCreds unmarshals the YAML credential file called name into dst.
-func UnmarshalYAMLCreds(dir, name string, dst interface{}) error {
-	credFile, err := os.Open(path.Join(dir, name))
+// UnmarshalYAMLCred unmarshals the YAML credential file called name into dst.
+func (s Service) UnmarshalYAMLCred(name string, dst interface{}) error {
+	if s.credsDir == "" {
+		panic("credentials directory not set by systemd")
+	}
+
+	return UnmarshalYAMLCred(s.credsDir, name, dst)
+}
+
+// LoadCred loads a credential file.
+func LoadCred(dir, name string) ([]byte, error) {
+	data, err := os.ReadFile(path.Join(dir, name))
+	if err != nil {
+		return nil, fmt.Errorf("load cred: %w", err)
+	}
+
+	return data, err
+}
+
+// UnmarshalYAMLCred unmarshals the YAML credential file called name into dst.
+func UnmarshalYAMLCred(dir, name string, dst interface{}) error {
+	data, err := LoadCred(dir, name)
 	if err != nil {
 		return fmt.Errorf("unmarshal YAML creds: %w", err)
 	}
 
-	err = yaml.NewDecoder(credFile).Decode(dst)
-
-	closeErr := credFile.Close()
-
-	switch {
-	case err != nil && closeErr != nil:
-		return fmt.Errorf("unmarshal YAML creds: [%w; %v]", err, closeErr)
-	case err != nil:
-		return fmt.Errorf("unmarshal YAML creds: %w", err)
-	case closeErr != nil:
-		return fmt.Errorf("unmarshal YAML creds: %w", closeErr)
-	default:
-		return nil
+	if err := yaml.Unmarshal(data, dst); err != nil {
+		return fmt.Errorf("unmarshal yaml cred: %w", err)
 	}
+
+	return nil
 }

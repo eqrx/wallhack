@@ -37,7 +37,7 @@ type Sink struct {
 func NewSink() (*Sink, error) {
 	conn, err := net.Dial("unixgram", journalPath)
 	if err != nil {
-		return nil, fmt.Errorf("connect to journal: %w", err)
+		return nil, fmt.Errorf("new systemd journal sink: %w", err)
 	}
 
 	unixConn := conn.(*net.UnixConn)

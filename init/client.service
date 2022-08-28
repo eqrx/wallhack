@@ -5,7 +5,8 @@ After=network-online.target
 Type=notify
 ExecStart=/usr/bin/wallhack
 User=wallhack
-LoadCredentialEncrypted=wallhack:/etc/wallhack
+LoadCredentialEncrypted=key:/etc/wallhack/key
+LoadCredentialEncrypted=cert:/etc/wallhack/cert
 CapabilityBoundingSet=
 LockPersonality=true
 MemoryDenyWriteExecute=true
@@ -30,7 +31,7 @@ RestrictSUIDSGID=true
 SecureBits=noroot-locked
 SystemCallArchitectures=native
 SystemCallFilter=@system-service
-SystemCallFilter=~@privileged @resources
+SystemCallFilter=~@privileged
 UMask=0077
 
 [Install]
